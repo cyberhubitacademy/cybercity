@@ -14,6 +14,7 @@ export const CONTROLS: { keys: string[]; action: string }[] = [
   { keys: ['R'], action: 'Next radio station (in a vehicle)' },
   { keys: ['H'], action: 'Horn' },
   { keys: ['M'], action: 'City map' },
+  { keys: ['G'], action: 'Cyber Arcade (1,291 challenges)' },
   { keys: ['Tab'], action: 'Missions & status' },
   { keys: ['I'], action: 'Inventory' },
   { keys: ['J'], action: 'Learning journal' },

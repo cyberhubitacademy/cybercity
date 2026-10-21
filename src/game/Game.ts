@@ -820,6 +820,7 @@ export class Game {
     if (i.wasPressed('KeyI')) { void this.openPause('inventory'); return; }
     if (i.wasPressed('KeyJ')) { void this.openPause('journal'); return; }
     if (i.wasPressed('KeyM')) { void this.openMap(); return; }
+    if (i.wasPressed('KeyG') && !this.world.vehicle) { void this.openArcadeBoard(); return; }
     const w = this.world;
     if (w.vehicle) {
       if (i.wasPressed('KeyE') || i.wasPressed('KeyF')) { w.exitVehicle(); return; }

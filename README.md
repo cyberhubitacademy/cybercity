@@ -34,6 +34,7 @@ quality to **Low** on older laptops.
 | R | — | Next radio station |
 | H | — | Horn |
 | M | Map (click to set a waypoint) | Map |
+| G | Cyber Arcade (1,291 challenges) | — |
 | Tab | Missions & status | Missions & status |
 | I / J | Inventory / Learning journal | — |
 | Esc | Pause menu | Pause menu |

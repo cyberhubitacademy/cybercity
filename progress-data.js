@@ -1,7 +1,7 @@
 // Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
 window.PROGRESS = {
-  updated: '21/10/2026 17:34:05',
-  now: 'PAUSED at weekly limit 99%. All work pushed. Next: confirm narration voice fix, playtest missions 3-9',
+  updated: '21/10/2026 17:34:36',
+  now: 'Polishing remaining items; pushing after each step',
   tasks: [
     { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
     { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },
@@ -17,9 +17,9 @@ window.PROGRESS = {
     { group: 'Cyber games', name: 'Traffic Investigator / Firewall Architect / Incident Command', weight: 7, done: 100 },
     { group: 'Cyber games', name: 'Cipher Puzzle / Forensics Timeline / Malware Triage', weight: 7, done: 100 },
     { group: 'Cyber games', name: 'Detection Engineering Lab + SOC Analyst Night Shift (new)', weight: 6, done: 100 },
-    { group: 'Cyber games', name: 'Cyber Arcade: all 1,000+ named challenges across 31 categories', weight: 10, done: 95 },
-    { group: 'Interface', name: 'HUD, minimap, full map, mission-passed screens', weight: 6, done: 85 },
-    { group: 'Interface', name: 'Main menu, pause, settings, skills, shop, learning journal', weight: 6, done: 85 },
+    { group: 'Cyber games', name: 'Cyber Arcade: all 1,000+ named challenges across 31 categories', weight: 10, done: 100 },
+    { group: 'Interface', name: 'HUD, minimap, full map, mission-passed screens', weight: 6, done: 90 },
+    { group: 'Interface', name: 'Main menu, pause, settings, skills, shop, learning journal', weight: 6, done: 90 },
     { group: 'Systems', name: 'XP / money / reputation / save-load', weight: 4, done: 100 },
     { group: 'Systems', name: 'Synthwave radio + sound effects (generated live)', weight: 3, done: 100 },
     { group: 'Quality', name: 'Automated tests + browser playtest + bug fixes', weight: 6, done: 70 },
