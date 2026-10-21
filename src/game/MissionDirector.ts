@@ -47,7 +47,7 @@ export class MissionDirector implements ScriptHost {
   timer: number | null = null;
   private pendingTalk: { npc: string; resolve: () => void } | null = null;
   pendingChallenge: { challenge: string; terminal: string; resolve: (v: boolean) => void } | null = null;
-  chase: { van: Vehicle; progress: number; tagSeconds: number; radius: number; resolve: (v: boolean) => void } | null = null;
+  chase: { van: Vehicle; progress: number; tagSeconds: number; radius: number; engaged: boolean; resolve: (v: boolean) => void } | null = null;
   collect: { items: { id: string; x: number; z: number; label: string }[]; found: Set<string>; resolve: (v: boolean) => void } | null = null;
   /** Dialogue ids already covered by the briefing shown at acceptance. */
   private skipBrief = false;
@@ -134,8 +134,10 @@ export class MissionDirector implements ScriptHost {
       const c = this.chase;
       const d = c.van.position.distanceTo(this.world.focus);
       if (this.world.vehicle && d < c.radius) c.progress += dt / c.tagSeconds;
+      if (d < 60) c.engaged = true;
       if (c.progress >= 1) this.endChase(true);
-      else if (d > 260 || this.timer === 0) this.endChase(false);
+      // The van only "gets away" if you lose it after catching up; before that only the timer counts.
+      else if ((c.engaged && d > 200) || this.timer === 0) this.endChase(false);
     }
     if (this.collect && this.timer === 0) {
       const col = this.collect;
@@ -364,7 +366,7 @@ export class MissionDirector implements ScriptHost {
     if (!v) return Promise.reject(new ScriptHandleError(vehicle));
     this.timer = timeLimit;
     return new Promise((resolve) => {
-      this.chase = { van: v, progress: 0, tagSeconds, radius, resolve };
+      this.chase = { van: v, progress: 0, tagSeconds, radius, engaged: false, resolve };
     });
   }
   collectStart(itemSet: string, timeLimit: number): Promise<boolean> {

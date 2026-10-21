@@ -73,7 +73,7 @@ export class Game {
   private clock = new THREE.Clock();
   private waypoint: { x: number; z: number } | null = null;
   private timer: number | null = null;
-  private chase: { van: Vehicle; progress: number; tagSeconds: number; radius: number } | null = null;
+  private chase: { van: Vehicle; progress: number; tagSeconds: number; radius: number; engaged: boolean } | null = null;
   private collectActive = false;
   private autosave = 0;
   private menuT = 0;
@@ -736,7 +736,7 @@ export class Game {
     if (this.chase) return;
     const van = this.world.spawnVehicle('van', -76.6, -30, Math.PI);
     this.world.traffic.adopt(van, undefined, 19);
-    this.chase = { van, progress: 0, tagSeconds: obj.tagSeconds, radius: obj.radius };
+    this.chase = { van, progress: 0, tagSeconds: obj.tagSeconds, radius: obj.radius, engaged: false };
     this.timer = obj.duration;
     this.ui.notify('The Pink Tide van is leaving the Tech Market! Stay close to plant the tracker.', 'warn');
     this.sfx('alert');
@@ -808,7 +808,8 @@ export class Game {
           this.missionEvent({ type: 'chase', success: true });
         }
       }
-      if (d > 260) this.missionEvent({ type: 'chase', success: false });
+      if (d < 60) c.engaged = true;
+      if (c.engaged && d > 200) this.missionEvent({ type: 'chase', success: false });
     }
   }
 
