@@ -6,8 +6,8 @@ import { categoryCard } from '../src/cyber/arcade/cards';
 import { caesar, fromBase64, fromHex, toBase64, toHex, vigenere } from '../src/cyber/arcade/mechanics/decode';
 import { slugify } from '../src/cyber/arcade/rng';
 
-const UNIQUE_NAMES = 1189;
-const RAW_NAMES = 1250;
+const UNIQUE_NAMES = 1291;
+const RAW_NAMES = 1306;
 
 describe('arcade catalog', () => {
   it('has all 31 categories in order', () => {

@@ -116,6 +116,21 @@ export class MissionManager {
     this.replaying = false;
   }
 
+  /** Finish the active mission now (used when an SCM script calls MISSION_COMPLETE). */
+  completeActive(): MissionUpdate {
+    const a = this.active();
+    if (!a) return { advanced: false };
+    this.state.objectiveIndex = a.def.objectives.length - 1;
+    return this.advance();
+  }
+
+  /** Fail the active mission (used when an SCM script calls MISSION_FAILED). */
+  failActive(reason: string): MissionUpdate {
+    const a = this.active();
+    if (!a) return { advanced: false };
+    return this.fail(a.def, reason);
+  }
+
   handle(event: MissionEvent): MissionUpdate {
     const a = this.active();
     if (!a) return { advanced: false };

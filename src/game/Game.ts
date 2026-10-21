@@ -23,6 +23,7 @@ import { TOPIC_LABELS, Topic, ChallengeDefinition } from '../cyber/types';
 import { ARCADE_TERMINALS, POSTS, TERMINALS } from '../world/spots';
 import { DISTRICTS, PLACES, SHARDS } from '../world/layout';
 import type { Vehicle } from '../vehicles/Vehicle';
+import { MissionDirector } from './MissionDirector';
 
 // Top-level game: menus, the play loop, and the glue between the simulated
 // world, the mission system, cyber challenges, progression and the UI.
@@ -61,6 +62,7 @@ export class Game {
   settings: Settings;
   profile: PlayerProfile;
   missions: MissionManager;
+  readonly director: MissionDirector;
   private mode: Mode = 'menu';
   /** True while a blocking screen (dialogue, challenge, menu) is open. */
   private busy = false;
@@ -85,6 +87,23 @@ export class Game {
     this.world = new WorldSim(this.renderer.renderer, this.camera, this.settings.quality);
     this.renderer.setScene(this.world.scene);
     this.markers = new WorldMarkers(this.world.scene);
+    this.director = new MissionDirector(this.world, {
+      dialogue: (lines) => this.modal(() => this.ui.dialogue(this.lines(lines))).then(() => undefined),
+      notify: (t, k) => this.ui.notify(t, k),
+      fade: (b) => this.ui.fade(b),
+      playChallenge: (id) => { const d = getChallenge(id); return d ? this.playChallenge(d, false) : Promise.resolve(false); },
+      onComplete: () => {
+        this.cleanupMissionProps();
+        void this.completeMission(this.missions.completeActive(), true);
+      },
+      onFailed: (_def, reason) => {
+        this.cleanupMissionProps();
+        this.applyUpdate(this.missions.failActive(reason));
+      },
+      onObjective: () => this.refreshMarkers(),
+      addMoney: (n) => { this.profile.credits += n; },
+      isPlayerDead: () => this.world.player.health <= 0,
+    });
     this.input = new Input(canvas);
     this.ui.showLoading(80, 'Waking up the pedestrians…');
     this.ui.sfx = (n) => this.audio.sfx(n as SfxId);
@@ -226,6 +245,9 @@ export class Game {
     this.ui.setHudVisible(true);
     this.audio.setMusicMode('world');
     this.cleanupMissionProps();
+    this.director.stop();
+    const active = this.missions.active();
+    if (active) this.director.start(active.def, false); // scripted missions restart from their beginning
     this.onObjectiveChanged();
   }
 
@@ -402,8 +424,9 @@ export class Game {
   }
 
   private terminalDesc(id: string): string {
+    if (this.director.pendingChallenge?.terminal === id) return 'Start the mission challenge';
     const a = this.missions.active();
-    if (a && a.objective.type === 'challenge' && a.objective.terminal === id) return 'Start the mission challenge';
+    if (!this.director.running && a && a.objective.type === 'challenge' && a.objective.terminal === id) return 'Start the mission challenge';
     if (id === 'hq-lab') return 'Replay any challenge you have unlocked';
     return 'Practice challenges here';
   }
@@ -413,8 +436,10 @@ export class Game {
     const c = CHARACTERS[npc];
     this.markers.waveAt(npc);
     const a = this.missions.active();
-    // active objective with this character
-    if (a && a.objective.type === 'talk' && a.objective.npc === npc) {
+    if (this.director.running) {
+      if (this.director.talked(npc)) return;
+    } else if (a && a.objective.type === 'talk' && a.objective.npc === npc) {
+      // active objective with this character (data-driven fallback)
       const obj = a.objective;
       await this.modal(() => this.ui.dialogue(this.lines(obj.lines)));
       this.missionEvent({ type: 'talk', npc });
@@ -429,6 +454,7 @@ export class Game {
       if (ok && this.missions.accept(def.id)) {
         this.sfx('open');
         this.ui.notify(`Mission started: ${def.title}`, 'good');
+        this.director.start(def, true);
         this.onObjectiveChanged();
       }
       return;
@@ -465,8 +491,9 @@ export class Game {
       await this.openArcadeBoard();
       return;
     }
+    if (this.director.running && (await this.director.usedTerminal(id))) return;
     const a = this.missions.active();
-    if (a && a.objective.type === 'challenge' && a.objective.terminal === id) {
+    if (!this.director.running && a && a.objective.type === 'challenge' && a.objective.terminal === id) {
       const def = getChallenge(a.objective.challenge);
       if (def) await this.playChallenge(def, true);
       return;
@@ -576,10 +603,10 @@ export class Game {
     }
   }
 
-  private async completeMission(u: MissionUpdate): Promise<void> {
+  private async completeMission(u: MissionUpdate, fromScript = false): Promise<void> {
     const def = u.completed ?? u.finished;
     if (!def) return;
-    if (def.completion.length) await this.modal(() => this.ui.dialogue(this.lines(def.completion)));
+    if (!fromScript && def.completion.length) await this.modal(() => this.ui.dialogue(this.lines(def.completion)));
     if (u.completed) {
       const fx = effects(this.profile);
       const sum = grantReward(this.profile, def.rewards, { xpMult: fx.xpMult, creditMult: fx.creditMult });
@@ -606,7 +633,56 @@ export class Game {
   }
 
   /** Called whenever the active objective may have changed: markers, props, timers. */
+  /** Markers for script-driven missions. */
+  private refreshMarkers(): void {
+    if (!this.director.running) return;
+    const t = this.director.target();
+    this.markers.setObjective(this.director.chase ? null : t, this.director.pendingChallenge ? '#19e6ff' : '#ffd23f');
+    this.markers.setTerminalHighlight(this.director.pendingChallenge?.terminal ?? null);
+    this.markers.setGiverIcons(new Set());
+    const text = this.director.objective;
+    if (text && text !== this.lastObjectiveNote && this.settings.showHints) {
+      this.lastObjectiveNote = text;
+      this.ui.notify(text, 'info');
+    }
+  }
+
+  private lastObjectiveNote: string | null = null;
+  private scriptCollectShown = false;
+
+  /** Show/hide rogue AP props for a script's COLLECT_START. */
+  private syncScriptCollect(): void {
+    const c = this.director.collect;
+    if (c && !this.scriptCollectShown) {
+      this.scriptCollectShown = true;
+      const items = c.items.filter((i) => !c.found.has(i.id));
+      this.markers.showAccessPoints(items);
+      for (const it of items) {
+        this.interactions.set({
+          id: `collect:${it.id}`, x: it.x, z: it.z, radius: 3, priority: 4,
+          title: `Scan ${it.label}`, desc: 'Log the rogue access point for takedown',
+          enabled: () => !this.world.vehicle,
+          action: () => {
+            this.interactions.remove(`collect:${it.id}`);
+            this.markers.hideAccessPoint(it.id);
+            this.sfx('pickup');
+            this.ui.notify(`Rogue access point scanned (${c.found.size + 1}/${c.items.length})`, 'good');
+            this.director.collected(it.id);
+          },
+        });
+      }
+    } else if (!c && this.scriptCollectShown) {
+      this.scriptCollectShown = false;
+      this.interactions.removePrefix('collect:');
+      this.markers.clearAccessPoints();
+    }
+  }
+
   private onObjectiveChanged(): void {
+    if (this.director.running) {
+      this.refreshMarkers();
+      return;
+    }
     const a = this.missions.active();
     this.markers.setTerminalHighlight(null);
     this.timer = null;
@@ -671,6 +747,11 @@ export class Game {
   }
 
   private updateMissionFrame(dt: number): void {
+    if (this.director.running) {
+      this.director.update(dt);
+      this.syncScriptCollect();
+      return;
+    }
     const a = this.missions.active();
     if (!a) return;
     const obj = a.objective;
@@ -807,7 +888,7 @@ export class Game {
       settings: this.settingsView(),
       onSettings: (s) => this.onSettingsChanged(s),
       onSave: () => { this.save(); this.ui.notify('Game saved.', 'good'); },
-      onQuitToMenu: () => { this.save(); this.showMainMenu(); },
+      onQuitToMenu: () => { this.save(); this.director.stop(); this.showMainMenu(); },
       onOpenMap: () => void this.openMap(),
       onResetSave: () => void this.resetSave(),
       initialTab: tab,
@@ -834,7 +915,13 @@ export class Game {
     const f = w.focus;
     const blips: Blip[] = [];
     const a = this.missions.active();
-    if (a) {
+    if (this.director.running) {
+      const t = this.director.target();
+      if (t && !this.director.chase) blips.push({ ...t, kind: 'objective', color: '#ffd23f', label: this.director.objective ?? '' });
+      for (const b of this.director.blipList()) blips.push({ x: b.x, z: b.z, kind: b.handle !== undefined ? 'target' : 'mission', color: b.color });
+      const col = this.director.collect;
+      if (col) for (const it of col.items) if (!col.found.has(it.id)) blips.push({ x: it.x, z: it.z, kind: 'target', color: '#ff2fa0', label: it.label });
+    } else if (a) {
       const t = objectiveTarget(a.objective);
       if (t && a.objective.type !== 'chase' && a.objective.type !== 'drive') blips.push({ ...t, kind: 'objective', color: '#ffd23f', label: a.objective.text });
       if (a.objective.type === 'collect') for (const it of this.missions.remainingItems()) blips.push({ x: it.x, z: it.z, kind: 'target', color: '#ff2fa0', label: it.label });
@@ -865,10 +952,12 @@ export class Game {
       xp: p.xp,
       xpNext: xpToNext(p.level),
       clock: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`,
-      objective: a ? a.objective.text : null,
+      objective: this.director.running ? this.director.objective : a ? a.objective.text : null,
       missionTitle: a ? a.def.title : null,
-      timer: this.timer !== null ? Math.ceil(this.timer) : null,
-      chase: this.chase ? { progress: Math.min(1, this.chase.progress), distance: Math.round(this.chase.van.position.distanceTo(w.focus)) } : null,
+      timer: this.director.running ? (this.director.timer !== null ? Math.ceil(this.director.timer) : null) : this.timer !== null ? Math.ceil(this.timer) : null,
+      chase: this.director.chase
+        ? { progress: Math.min(1, this.director.chase.progress), distance: Math.round(this.director.chase.van.position.distanceTo(w.focus)) }
+        : this.chase ? { progress: Math.min(1, this.chase.progress), distance: Math.round(this.chase.van.position.distanceTo(w.focus)) } : null,
       vehicle: w.vehicle ? { speedKmh: Math.round(w.vehicle.kmh), name: w.vehicle.def.name } : null,
       radio: w.vehicle ? this.audio.currentStation() : null,
     });

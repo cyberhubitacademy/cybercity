@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyber Arcade Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>body { overflow: auto !important; padding: 16px; background: linear-gradient(160deg, #2a0f5a, #0b0a24) !important; } #play { margin-top: 16px; }</style>
+</head>
+<body>
+  <div id="board"></div>
+  <div id="play" class="panel" style="padding:16px;display:none"></div>
+  <script type="module">
+    import '/src/styles.css';
+    import { mountArcadeBoard, arcadeChallenge } from '/src/cyber/arcade/index.ts';
+    // Dev-only preview of the Cyber Arcade board and one round.
+    const progress = {};
+    const play = document.getElementById('play');
+    window.playArcade = (id) => {
+      const def = arcadeChallenge(id);
+      play.style.display = 'block';
+      play.innerHTML = `<h2 class="neon-title">${def.title}</h2><p>${def.intro}</p><div id="root"></div>`;
+      def.mount({ root: document.getElementById('root'), bonusHints: 1, sfx: () => {}, finish: (r) => { progress[id] = { best: r.score }; play.innerHTML = `<pre>${JSON.stringify(r, null, 2)}</pre>`; } });
+      play.scrollIntoView();
+    };
+    mountArcadeBoard(document.getElementById('board'), { progress, onPlay: (id) => window.playArcade(id) });
+  </script>
+</body>
+</html>
