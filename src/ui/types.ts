@@ -87,6 +87,10 @@ export interface MainMenuOptions {
   onHub: () => void;
   onControls: () => void;
   onCredits: () => void;
+  /** Short progress summary shown under Continue, e.g. "Level 3 · $1,250 · saved 5 min ago". */
+  saveInfo?: string;
+  /** Opens the save-file screen (link a file on disk, import/export). */
+  onSaveFile?: () => void;
 }
 
 export type QualityLevel = 'low' | 'medium' | 'high' | 'ultra';

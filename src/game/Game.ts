@@ -8,6 +8,7 @@ import { UI } from '../ui/UI';
 import type { Blip, DialogueLine as UiLine, PauseView, SettingsView, ShopItem as UiShopItem, PracticeRow, ConceptView, MasteryRow } from '../ui/types';
 import { AudioEngine, SfxId } from '../audio/AudioEngine';
 import { SaveManager } from '../progression/SaveManager';
+import { SaveFile, SaveEnvelope } from '../progression/SaveFile';
 import type { PlayerProfile, Settings } from '../progression/types';
 import { ORG_LABELS, ORGS } from '../progression/types';
 import { addJournal, addXp, grantReward, masteryPercent, recordChallenge, xpToNext } from '../progression/progression';
@@ -28,6 +29,17 @@ import type { Vehicle } from '../vehicles/Vehicle';
 
 type Mode = 'menu' | 'playing';
 
+const SAVED_AT_KEY = 'cybercity.savedAt';
+const BACKUP_KEY = 'cybercity.save.backup';
+
+function timeAgo(t: number): string {
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  return new Date(t).toLocaleDateString();
+}
+
 const SHIRTS: Record<string, [string, string]> = {
   default: ['#1fb5c9', '#ff3d9a'],
   'shirt-sunset': ['#ff8a3d', '#ff2fa0'],
@@ -43,6 +55,7 @@ export class Game {
   readonly ui: UI;
   readonly audio = new AudioEngine();
   readonly saves = new SaveManager();
+  readonly saveFile = new SaveFile();
   readonly markers: WorldMarkers;
   readonly interactions = new Interactions();
   settings: Settings;
@@ -83,6 +96,10 @@ export class Game {
     this.registerStaticInteractions();
     window.addEventListener('pointerdown', () => this.audio.init(), { once: false });
     window.addEventListener('keydown', () => this.audio.init(), { once: false });
+    void this.saveFile.restore().then(() => { if (this.mode === 'menu') this.showMainMenu(); });
+    const flush = () => { if (this.mode === 'playing') this.save(); };
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+    window.addEventListener('pagehide', flush);
     this.ui.showLoading(100, 'Ready');
     setTimeout(() => this.ui.hideLoading(), 250);
     this.showMainMenu();
@@ -104,14 +121,68 @@ export class Game {
       onHub: () => void this.modal(() => this.ui.openLearningHub({ concepts: this.conceptViews(), mastery: this.masteryRows(), practice: this.practiceRows() })),
       onControls: () => void this.modal(() => this.ui.controlsScreen()),
       onCredits: () => void this.modal(() => this.ui.credits()),
+      saveInfo: this.saveSummary(),
+      onSaveFile: () => void this.openSaveFileScreen(),
     });
   }
 
-  private async newGame(): Promise<void> {
-    if (this.saves.hasSave() && !(await this.ui.confirm('Start a new game? Your current save will be replaced.', 'New game'))) {
-      this.showMainMenu();
-      return;
+  private savedAt(): number {
+    try {
+      return Number(localStorage.getItem(SAVED_AT_KEY) ?? 0) || 0;
+    } catch {
+      return 0;
     }
+  }
+
+  private saveSummary(): string | undefined {
+    const p = this.saves.load();
+    if (!p) return undefined;
+    const done = p.missions.completed.length;
+    const at = this.savedAt();
+    const ago = at ? timeAgo(at) : 'earlier';
+    return `Level ${p.level} · $${p.credits.toLocaleString()} · ${done} mission${done === 1 ? '' : 's'} done · saved ${ago}${this.saveFile.linked ? ` · file: ${this.saveFile.fileName}` : ''}`;
+  }
+
+  /** Save-file screen: link a file on disk (Chrome/Edge), open, import or export. */
+  private async openSaveFileScreen(): Promise<void> {
+    const sf = this.saveFile;
+    const options = sf.supported
+      ? [sf.linked ? `Re-link (now: ${sf.fileName})` : 'Choose where to save my progress file', 'Open an existing save file', 'Download a copy of my save', 'Cancel']
+      : ['Download a copy of my save', 'Load a save file from my computer', 'Cancel'];
+    const intro = sf.supported
+      ? 'Your progress autosaves in this browser. Link a save file and every autosave is also written to that file on your computer; Continue syncs from whichever copy is newer.'
+      : 'Your progress autosaves in this browser. This browser cannot keep writing to a file, but you can download a copy of your save and load it later (or on another computer).';
+    const pick = await this.modal(() => this.ui.dialogue([{ speaker: 'max', name: 'Save File', color: '#19e6ff', text: intro }], options, 'Save File'));
+    const choice = options[pick];
+    const local = this.saves.load();
+    if (choice.startsWith('Choose') || choice.startsWith('Re-link')) {
+      const ok = await sf.link(local ?? this.profile);
+      this.ui.notify(ok ? `Linked ${sf.fileName}. Autosaves now go there too.` : 'No file linked.', ok ? 'good' : 'info');
+    } else if (choice.startsWith('Open') || choice.startsWith('Load')) {
+      const env = sf.supported ? await sf.openExisting() : await sf.importUpload();
+      if (env) this.adoptEnvelope(env, 'Loaded save from file.');
+      else this.ui.notify('That file is not a Cyber City save.', 'warn');
+    } else if (choice.startsWith('Download')) {
+      if (local) sf.exportDownload(local);
+      else this.ui.notify('No save yet — start a game first.', 'info');
+    }
+    this.showMainMenu();
+  }
+
+  /** Take a save from a file as the current save (browser copy is overwritten). */
+  private adoptEnvelope(env: SaveEnvelope, msg: string): void {
+    this.saves.save(env.profile);
+    try { localStorage.setItem(SAVED_AT_KEY, String(env.savedAt)); } catch { /* ignore */ }
+    this.ui.notify(msg, 'good');
+  }
+
+  private async newGame(): Promise<void> {
+    // New Game overwrites the save automatically; one backup of the old save is kept.
+    const old = this.saves.load();
+    if (old) {
+      try { localStorage.setItem(BACKUP_KEY, JSON.stringify(old)); } catch { /* storage full or blocked */ }
+    }
+    await this.saveFile.ensurePermission();
     this.profile = this.saves.newProfile();
     this.missions = new MissionManager(MISSIONS);
     this.ui.hideMainMenu();
@@ -124,6 +195,11 @@ export class Game {
   }
 
   private async continueGame(): Promise<void> {
+    // Sync: if a linked save file is newer than the browser copy, use it.
+    if (this.saveFile.linked && (await this.saveFile.ensurePermission())) {
+      const env = await this.saveFile.read();
+      if (env && env.savedAt > this.savedAt()) this.adoptEnvelope(env, `Synced newer progress from ${this.saveFile.fileName}.`);
+    }
     const p = this.saves.load();
     if (!p) {
       this.ui.notify('No valid save found — starting fresh.', 'warn');
@@ -207,7 +283,11 @@ export class Game {
     p.hour = this.world.hour;
     p.health = this.world.player.health;
     p.missions = this.missions.serialize();
+    if (p.journal.length > 400) p.journal = p.journal.slice(-400);
+    const at = Date.now();
     if (!this.saves.save(p)) this.ui.notify('Could not save (browser storage unavailable).', 'warn');
+    try { localStorage.setItem(SAVED_AT_KEY, String(at)); } catch { /* ignore */ }
+    void this.saveFile.write(p, at);
   }
 
   // ---------------------------------------------------------------- helpers
@@ -825,7 +905,7 @@ export class Game {
         this.markers.update(dt, w.time, w.focus);
         this.hornCooldown -= dt;
         this.autosave += dt;
-        if (this.autosave > 60) { this.autosave = 0; this.save(); }
+        if (this.autosave > 30) { this.autosave = 0; this.save(); }
         if (this.lastSubtitle > 0) { this.lastSubtitle -= dt; if (this.lastSubtitle <= 0) this.ui.subtitle(null, null); }
         // audio: engine + ambience
         const v = w.vehicle;

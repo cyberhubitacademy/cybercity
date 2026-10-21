@@ -121,6 +121,7 @@ export class UI {
     const items: [string, () => void, boolean][] = [
       ['Continue', o.onContinue, o.hasSave],
       ['New Game', o.onNew, true],
+      ...(o.onSaveFile ? [['Save File', o.onSaveFile, true] as [string, () => void, boolean]] : []),
       ['Learning Hub', o.onHub, true],
       ['Settings', o.onSettings, true],
       ['Controls', o.onControls, true],
@@ -135,6 +136,7 @@ export class UI {
       b.addEventListener('mouseenter', () => { if (!b.disabled) { focus(buttons.indexOf(b)); } });
       buttons.push(b);
       list.append(b);
+      if (label === 'Continue' && o.saveInfo && o.hasSave) list.append(el('div', { class: 'cc-save-info' }, o.saveInfo));
     }
     let idx = buttons.findIndex((b) => !b.disabled);
     const focus = (i: number) => {
