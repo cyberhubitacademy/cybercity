@@ -1,0 +1,12 @@
+.fw-root { gap: 14px; }
+.fw-topo-wrap { padding: 8px; }
+.fw-topo { width: 100%; max-height: 240px; display: block; font-family: var(--font-ui); }
+.fw-head h4 { margin: 0; flex: 1; }
+.fw-rules { max-height: 34vh; }
+.fw-sim { max-height: 32vh; }
+.fw-sel { padding: 3px 6px; font-size: 13px; }
+.fw-ops { white-space: nowrap; }
+.fw-ops .cx-btn { margin-right: 4px; }
+.fw-shadowed td { opacity: 0.55; }
+.fw-small { font-size: 14px; }
+.fw-line { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 600; }

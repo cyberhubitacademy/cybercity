@@ -1,0 +1,13 @@
+.ph-inbox { max-height: 56vh; overflow: auto; padding-right: 4px; }
+.ph-item { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+.ph-item:hover { border-color: var(--pink); transform: translateX(2px); }
+.ph-item-top { justify-content: space-between; }
+.ph-subject { font-size: 15px; margin: 4px 0 6px; color: var(--text); }
+.ph-reader { max-height: 56vh; overflow: auto; }
+.ph-headers { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.ph-body { background: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 4px 14px; line-height: 1.45; }
+.ph-link { color: var(--cyan); text-decoration: underline; cursor: help; font-weight: 700; }
+.ph-linkbox { padding: 8px 10px; border: 1px dashed rgba(25, 230, 255, 0.4); border-radius: 10px; }
+.ph-href { color: var(--pink-soft); word-break: break-all; }
+.ph-flag { font-size: 13px; }
+.ph-resp { text-align: left; }

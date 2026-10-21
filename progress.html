@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber City Progress</title>
+<style>
+  :root { --pink:#ff2fa0; --cyan:#19e6ff; --purple:#7b2cff; --orange:#ff8a3d; --yellow:#ffd23f; --navy:#0b0a24; --panel:#17113d; --text:#f6f2ff; --muted:#b9b0d9; --good:#3dff9a; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; color:var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #ff8a3d55, transparent 60%), linear-gradient(180deg, #2a0f5a 0%, var(--navy) 55%); padding: 24px 16px 48px; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { margin:0; font-size: clamp(30px, 6vw, 52px); font-weight: 900; letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--pink), var(--orange), var(--yellow)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color: var(--muted); margin: 4px 0 22px; }
+  .hero { display:grid; grid-template-columns: 180px 1fr; gap: 22px; align-items:center; background: var(--panel); border:1px solid #19e6ff55; border-radius: 16px; padding: 20px; box-shadow: 0 0 40px #7b2cff33; }
+  @media (max-width: 560px) { .hero { grid-template-columns: 1fr; justify-items:center; text-align:center; } }
+  .ring { width:170px; height:170px; border-radius:50%; display:grid; place-items:center; }
+  .ring > div { width:132px; height:132px; border-radius:50%; background: var(--panel); display:grid; place-items:center; text-align:center; }
+  .pct { font-size: 40px; font-weight: 900; }
+  .lbl { font-size: 12px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .stats { display:flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .stat { background:#ffffff0d; border:1px solid #ffffff1f; border-radius: 12px; padding: 10px 14px; min-width: 120px; }
+  .stat b { display:block; font-size: 26px; }
+  .done b { color: var(--good); } .pend b { color: var(--pink); }
+  .now { color: var(--cyan); }
+  .group { margin-top: 26px; }
+  .group h2 { font-size: 15px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin: 0 0 10px; }
+  .task { background: var(--panel); border:1px solid #ffffff14; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+  .row { display:flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .bar { height: 8px; border-radius: 6px; background:#ffffff14; overflow:hidden; }
+  .bar > div { height:100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); transition: width .6s; }
+  .task.complete .bar > div { background: var(--good); }
+  .tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .t-done { color: var(--good); border:1px solid var(--good); } .t-work { color: var(--yellow); border:1px solid var(--yellow); } .t-todo { color: var(--muted); border:1px solid #ffffff33; }
+  .drafts { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .drafts a { display:block; border-radius: 10px; overflow:hidden; border:1px solid #ffffff22; }
+  .drafts img { width:100%; display:block; aspect-ratio: 16/9; object-fit: cover; }
+  .drafts figcaption { font-size: 12px; color: var(--muted); padding: 4px 6px; background: var(--panel); }
+  .foot { margin-top: 24px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CYBER CITY</h1>
+  <div class="sub">Build progress — refreshes every 5 seconds · <span id="updated"></span></div>
+  <div class="hero">
+    <div class="ring" id="ring"><div><div><div class="pct" id="pct">0%</div><div class="lbl">complete</div></div></div></div>
+    <div>
+      <div class="stats">
+        <div class="stat done"><span class="lbl">Done</span><b id="donePct">0%</b></div>
+        <div class="stat pend"><span class="lbl">Pending</span><b id="pendPct">100%</b></div>
+        <div class="stat"><span class="lbl">Tasks finished</span><b id="count">0/0</b></div>
+      </div>
+      <div><span class="lbl">Working on now</span><div class="now" id="now"></div></div>
+    </div>
+  </div>
+  <div class="group"><h2>Latest drafts</h2><div id="drafts" class="drafts"><span class="lbl">Drafts appear here while the dev server runs.</span></div></div>
+  <div id="groups"></div>
+  <div class="foot">Percent is weighted by task size. Data lives in progress-data.js next to this page.</div>
+</div>
+<!--DATA--><script>
+// Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
+window.PROGRESS = {
+  updated: '21/10/2026 17:01:25',
+  now: 'Full game boots (menu, HUD, missions wired). Detection Engineering + SOC added. Preparing GitHub push',
+  tasks: [
+    { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
+    { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },
+    { group: 'World', name: 'City layout: 7 districts, roads, landmarks', weight: 6, done: 100 },
+    { group: 'World', name: 'Buildings, palms, beach, ocean, pier + Ferris wheel', weight: 10, done: 95 },
+    { group: 'World', name: 'Realistic sky, reflective ocean, shadows, AO, bloom, color grading (GTA-style look)', weight: 8, done: 85 },
+    { group: 'Gameplay', name: 'Player character, controls, camera, collision', weight: 7, done: 85 },
+    { group: 'Gameplay', name: 'Drivable cars, boat, traffic AI, radio', weight: 8, done: 80 },
+    { group: 'Gameplay', name: 'Pedestrians + mission-giver characters', weight: 5, done: 75 },
+    { group: 'Story', name: 'Mission system + 9 story missions + side missions', weight: 8, done: 85 },
+    { group: 'Story', name: 'Dialogue, cutscene text, Hot Pursuit van chase', weight: 5, done: 75 },
+    { group: 'Cyber games', name: 'Phishing Detective / Social Engineering / Password Lab', weight: 7, done: 100 },
+    { group: 'Cyber games', name: 'Traffic Investigator / Firewall Architect / Incident Command', weight: 7, done: 100 },
+    { group: 'Cyber games', name: 'Cipher Puzzle / Forensics Timeline / Malware Triage', weight: 7, done: 100 },
+    { group: 'Cyber games', name: 'Detection Engineering Lab + SOC Analyst Night Shift (new)', weight: 6, done: 100 },
+    { group: 'Cyber games', name: 'Cyber Arcade: all 1,000+ named challenges across 31 categories', weight: 10, done: 5 },
+    { group: 'Interface', name: 'HUD, minimap, full map, mission-passed screens', weight: 6, done: 85 },
+    { group: 'Interface', name: 'Main menu, pause, settings, skills, shop, learning journal', weight: 6, done: 85 },
+    { group: 'Systems', name: 'XP / money / reputation / save-load', weight: 4, done: 85 },
+    { group: 'Systems', name: 'Synthwave radio + sound effects (generated live)', weight: 3, done: 90 },
+    { group: 'Quality', name: 'Automated tests + browser playtest + bug fixes', weight: 6, done: 0 },
+    { group: 'Quality', name: 'README: how to run, controls, limits', weight: 2, done: 80 },
+    { group: 'Story', name: 'SCM-style mission language: compiler, bytecode, verifier, VM, 12 scripted missions', weight: 8, done: 5 },
+    { group: 'Release', name: 'GitHub repo "cybercity" + GitHub Pages hosting', weight: 2, done: 30 },
+  ],
+};
+
+</script><!--/DATA-->
+<script>
+  function render(p) {
+    if (!p) return;
+    let total = 0, got = 0, finished = 0;
+    for (const t of p.tasks) { total += t.weight; got += t.weight * t.done / 100; if (t.done >= 100) finished++; }
+    const pct = total ? Math.round(got / total * 100) : 0;
+    document.getElementById('pct').textContent = pct + '%';
+    document.getElementById('donePct').textContent = pct + '%';
+    document.getElementById('pendPct').textContent = (100 - pct) + '%';
+    document.getElementById('count').textContent = finished + '/' + p.tasks.length;
+    document.getElementById('now').textContent = p.now || '';
+    document.getElementById('updated').textContent = 'last update: ' + (p.updated || '');
+    document.getElementById('ring').style.background = `conic-gradient(var(--pink) 0%, var(--cyan) ${pct}%, #ffffff14 ${pct}% 100%)`;
+    const byGroup = {};
+    for (const t of p.tasks) (byGroup[t.group] ||= []).push(t);
+    const root = document.getElementById('groups');
+    root.innerHTML = '';
+    for (const [g, list] of Object.entries(byGroup)) {
+      const sec = document.createElement('div'); sec.className = 'group';
+      const h = document.createElement('h2'); h.textContent = g; sec.append(h);
+      for (const t of list) {
+        const d = document.createElement('div'); d.className = 'task' + (t.done >= 100 ? ' complete' : '');
+        const state = t.done >= 100 ? ['t-done', 'Done'] : t.done > 0 ? ['t-work', t.done + '%'] : ['t-todo', 'Pending'];
+        const row = document.createElement('div'); row.className = 'row';
+        const name = document.createElement('span'); name.textContent = t.name;
+        const tag = document.createElement('span'); tag.className = 'tag ' + state[0]; tag.textContent = state[1];
+        row.append(name, tag);
+        const bar = document.createElement('div'); bar.className = 'bar';
+        const fill = document.createElement('div'); fill.style.width = t.done + '%'; bar.append(fill);
+        d.append(row, bar); sec.append(d);
+      }
+      root.append(sec);
+    }
+  }
+  // Opened from disk (file://) some browsers refuse a query string on the script
+  // URL, so fall back to the plain name if the cache-busting load fails.
+  function load(bust = true) {
+    const s = document.createElement('script');
+    s.src = 'progress-data.js' + (bust ? '?t=' + Date.now() : '');
+    s.onload = () => { render(window.PROGRESS); s.remove(); };
+    s.onerror = () => { s.remove(); if (bust) load(false); };
+    document.head.append(s);
+  }
+  let lastDrafts = '';
+  async function loadDrafts() {
+    try {
+      const r = await fetch('/__drafts', { cache: 'no-store' });
+      if (!r.ok) return;
+      const list = await r.json();
+      const key = JSON.stringify(list);
+      if (key === lastDrafts) return;
+      lastDrafts = key;
+      const root = document.getElementById('drafts');
+      root.innerHTML = '';
+      for (const f of list.slice().reverse()) {
+        const fig = document.createElement('figure'); fig.style.margin = '0';
+        const a = document.createElement('a'); a.href = 'drafts/' + f; a.target = '_blank';
+        const img = document.createElement('img'); img.src = 'drafts/' + f + '?t=' + Date.now(); img.loading = 'lazy';
+        const cap = document.createElement('figcaption'); cap.textContent = f.replace(/\.jpg$/, '').replace(/-/g, ' ');
+        a.append(img); fig.append(a, cap); root.append(fig);
+      }
+    } catch (e) { /* opened as a file: no gallery */ }
+  }
+  render(window.PROGRESS); // embedded copy
+  if (location.protocol.startsWith('http')) {
+    load(); loadDrafts();
+    setInterval(() => { load(); loadDrafts(); }, 5000);
+  } else if (location.protocol === 'file:') {
+    setTimeout(() => location.reload(), 5000); // re-read the file from disk
+  }
+</script>
+</body>
+</html>

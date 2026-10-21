@@ -1,0 +1,5 @@
+node_modules
+dist
+drafts
+*.log
+.claude/settings.local.json

@@ -1,0 +1,19 @@
+.de-root { gap: 14px; }
+.de-top { display: grid; gap: 14px; grid-template-columns: 3fr 2fr; }
+.de-main { display: grid; gap: 14px; grid-template-columns: minmax(220px, 1fr) 2.4fr; }
+@media (max-width: 1000px) { .de-top, .de-main { grid-template-columns: 1fr; } }
+.de-small { font-size: 14px; margin: 4px 0; }
+.de-h { margin: 0; color: var(--cyan-soft); }
+.de-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 6px 0; }
+.de-metric { background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; }
+.de-mval { font-family: var(--font-display); font-size: 24px; }
+.de-rules { gap: 8px; }
+.de-rulebtn { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; }
+.de-rulestats { white-space: nowrap; }
+.de-editor { gap: 10px; }
+.de-cond { flex-wrap: wrap; }
+.de-val { flex: 1; min-width: 160px; }
+.de-table { max-height: 40vh; }
+.de-table td { white-space: nowrap; }
+.de-cmd { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.de-line { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 600; }

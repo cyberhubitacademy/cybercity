@@ -1,0 +1,14 @@
+.tr-root { gap: 14px; }
+.tr-top { display: grid; gap: 14px; grid-template-columns: 3fr 2fr; }
+@media (max-width: 1000px) { .tr-top { grid-template-columns: 1fr; } }
+.tr-small { font-size: 14px; margin: 4px 0 8px; }
+.tr-ports { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 4px 12px; font-size: 14px; }
+.tr-port b { color: var(--yellow); }
+.tr-status { display: flex; flex-direction: column; gap: 8px; }
+.tr-table { max-height: 42vh; }
+.tr-table td { white-space: nowrap; }
+.tr-info { color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+.tr-sel { padding: 3px 6px; font-size: 12px; }
+.tr-action { text-align: left; }
+.tr-h { margin: 0; color: var(--cyan-soft); }
+.tr-line { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 600; }

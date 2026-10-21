@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyber City UI Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=JetBrains+Mono:wght@400;700&family=Pacifico&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    html body.preview {
+      background:
+        radial-gradient(900px 420px at 70% 105%, rgba(255, 138, 61, 0.75), transparent 60%),
+        linear-gradient(180deg, #1d6fd8 0%, #6a4fd0 45%, #ff7aa8 80%, #ffb36b 100%);
+    }
+    #preview-bar { position: fixed; top: 50%; right: 8px; transform: translateY(-50%); z-index: 200; display: flex; flex-direction: column; gap: 4px; }
+    #preview-bar button { font: 600 12px Rajdhani, sans-serif; padding: 4px 8px; border-radius: 6px; border: 1px solid #fff5; background: #0b0a24cc; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body class="preview">
+  <div id="ui"></div>
+  <div id="preview-bar"></div>
+  <script type="module" src="/src/ui/preview.ts"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+.cr-root { gap: 14px; }
+.cr-intercept { border-color: rgba(255, 47, 160, 0.5); box-shadow: 0 0 18px rgba(255, 47, 160, 0.25); }
+.cr-blob { margin-top: 8px; word-break: break-all; color: var(--pink-soft); line-height: 1.5; text-shadow: 0 0 8px rgba(255, 47, 160, 0.5); }
+.cr-work { width: 100%; resize: vertical; margin: 6px 0 8px; word-break: break-all; }
+.cr-status { min-height: 20px; margin-top: 6px; font-size: 14px; }
+.cr-caesar { margin-top: 10px; padding: 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(25, 230, 255, 0.25); display: flex; flex-direction: column; gap: 6px; }
+.cr-slider { accent-color: var(--pink); width: 180px; }
+.cr-preview { color: var(--yellow); word-break: break-all; min-height: 40px; }
+.cr-freq { color: var(--cyan-soft); }
+.cr-warn { margin-top: 10px; font-size: 14px; }
+.cr-hashin { width: 100%; margin: 8px 0; }
+.cr-digest { color: var(--mint); word-break: break-all; margin-bottom: 8px; }
+.cr-cand { display: flex; justify-content: space-between; gap: 10px; align-items: center; text-align: left; width: 100%; }
+.cr-cand .cx-mono { word-break: break-all; font-size: 12px; }
+.cr-q { margin: 10px 0 14px; display: flex; flex-direction: column; gap: 8px; }
+.cr-matchrow { display: grid; grid-template-columns: 200px 1fr; gap: 10px; align-items: center; }
+.cr-match { width: 100%; }
+@media (max-width: 900px) { .cr-matchrow { grid-template-columns: 1fr; } }

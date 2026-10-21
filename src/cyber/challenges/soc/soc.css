@@ -1,0 +1,20 @@
+.so-root { gap: 14px; }
+.so-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.so-barinfo { flex: 1; min-width: 240px; gap: 2px; }
+.so-clock { color: var(--cyan); text-shadow: var(--glow-cyan); font-size: 26px; }
+.so-main { display: grid; gap: 14px; grid-template-columns: minmax(240px, 1fr) 2fr; }
+@media (max-width: 1000px) { .so-main { grid-template-columns: 1fr; } }
+.so-queue { gap: 8px; max-height: 60vh; overflow: auto; padding-right: 4px; }
+.so-alert { display: flex; flex-direction: column; align-items: stretch; gap: 3px; text-align: left; }
+.so-alert-top { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.so-alert-rule { font-size: 16px; }
+.so-alert-state { display: flex; gap: 6px; }
+.so-small { font-size: 13px; }
+.so-detail { gap: 8px; }
+.so-h { margin: 0; color: var(--cyan-soft); }
+.so-sub { margin: 6px 0 0; color: var(--pink-soft); font-size: 15px; }
+.so-raw { white-space: pre-wrap; word-break: break-all; margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); }
+.so-enrich { font-size: 14px; padding: 6px 10px; border-left: 3px solid var(--cyan); background: rgba(25, 230, 255, 0.07); border-radius: 6px; }
+.so-fact { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 15px; }
+.so-fact input { margin-top: 4px; accent-color: var(--pink); }
+.so-line { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 600; }

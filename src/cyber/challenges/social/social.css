@@ -1,0 +1,11 @@
+.so-card { max-width: 900px; }
+.so-icon { font-size: 34px; filter: drop-shadow(0 0 8px rgba(255, 47, 160, 0.6)); }
+.so-who strong { font-size: 19px; color: var(--yellow); }
+.so-bubble {
+  position: relative; padding: 14px 16px; border-radius: 14px; line-height: 1.5; font-size: 17px;
+  background: linear-gradient(135deg, rgba(255, 47, 160, 0.16), rgba(123, 44, 255, 0.18));
+  border: 1px solid rgba(255, 47, 160, 0.45);
+}
+.so-opt { text-align: left; }
+.so-follow { color: var(--pink-soft) !important; margin-top: 8px !important; }
+.so-queue .cx-btn { min-width: 64px; }

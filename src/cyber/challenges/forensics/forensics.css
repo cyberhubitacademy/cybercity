@@ -1,0 +1,15 @@
+.fo-root { gap: 14px; }
+.fo-choice { text-align: left; }
+.fo-board { margin-top: 10px; }
+.fo-locker { padding: 8px; }
+.fo-artifact { padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.22); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.fo-artifact.placed { border-color: var(--pink); background: rgba(255, 47, 160, 0.1); }
+.fo-src { font-size: 13px; }
+.fo-raw { word-break: break-all; color: var(--cyan-soft); font-size: 12px; }
+.fo-timeline { margin: 0; padding: 0 0 0 26px; display: flex; flex-direction: column; gap: 8px; border-left: 3px solid var(--pink); list-style: decimal; color: var(--pink-soft); }
+.fo-slot { padding: 8px 10px; border-radius: 10px; background: linear-gradient(90deg, rgba(255, 47, 160, 0.14), rgba(123, 44, 255, 0.12)); border: 1px solid rgba(255, 47, 160, 0.4); display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text); }
+.fo-slot-body { display: flex; flex-direction: column; }
+.fo-slot-btns { gap: 4px; }
+.fo-empty { list-style: none; padding: 10px; }
+.fo-q { margin: 8px 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.fo-details summary { cursor: pointer; color: var(--cyan-soft); margin: 8px 0; }

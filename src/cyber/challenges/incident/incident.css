@@ -1,0 +1,22 @@
+.ir-root { gap: 14px; }
+.ir-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ir-clockbox { display: flex; align-items: center; gap: 10px; }
+.ir-clock { font-size: 22px; color: var(--bad); text-shadow: 0 0 10px rgba(255, 77, 109, 0.7); }
+.ir-live { animation: ir-blink 1.2s infinite; }
+@keyframes ir-blink { 50% { opacity: 0.35; } }
+.ir-small { font-size: 14px; }
+.ir-alert { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; }
+.ir-alert.ir-fp { opacity: 0.6; border-style: dashed; }
+.ir-rank { font-family: var(--font-display); font-size: 22px; color: var(--pink); text-align: center; }
+.ir-title { font-weight: 700; font-size: 17px; margin: 4px 0 2px; }
+.ir-ops { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 900px) { .ir-alert { grid-template-columns: 36px 1fr; } .ir-ops { grid-column: 1 / -1; justify-content: flex-start; } }
+.ir-pool { display: flex; flex-direction: column; gap: 8px; }
+.ir-card-btn { text-align: left; }
+.ir-seq { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.ir-seq li::marker { color: var(--pink); font-family: var(--font-display); }
+.ir-step { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; }
+.ir-step-title { font-weight: 600; }
+.ir-choice { text-align: left; }
+.ir-h { margin: 0; color: var(--cyan-soft); }
+.ir-line { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 600; }
