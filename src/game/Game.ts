@@ -108,6 +108,8 @@ export class Game {
     this.world = new WorldSim(this.renderer.renderer, this.camera, this.settings.quality);
     this.renderer.setScene(this.world.scene);
     this.markers = new WorldMarkers(this.world.scene);
+    // story characters are solid, like everyone else in Neon Bay
+    for (const p of POSTS) this.world.city.collision.add({ x0: p.x - 0.35, x1: p.x + 0.35, z0: p.z - 0.35, z1: p.z + 0.35, y0: 0, y1: 1.8, solidForCars: true });
     this.director = new MissionDirector(this.world, {
       dialogue: (lines) => this.modal(() => this.ui.dialogue(this.lines(lines))).then(() => undefined),
       notify: (t, k) => this.ui.notify(t, k),

@@ -441,7 +441,7 @@ export class CityBuilder {
       this.collision.addRect(x1 - 1.7, z - 0.7, x1 - 0.3, z + 0.7, 6);
     }
     // lobby floor (glossy terrazzo)
-    const floor = this.mesh(new THREE.BoxGeometry(x1 - x0, 0.2, z1 - z0), this.plainMat('#f6eef8', 0.25, 0.05), (x0 + x1) / 2, 0.1, (z0 + z1) / 2, false, true);
+    const floor = this.mesh(new THREE.BoxGeometry(x1 - x0, 0.2, z1 - z0), this.plainMat('#d8cce2', 0.45, 0.05), (x0 + x1) / 2, 0.1, (z0 + z1) / 2, false, true);
     floor.receiveShadow = true;
     this.collision.addRect(x0, z0, x1, z1, 0.2);
     // ceiling glow strips
