@@ -32,8 +32,18 @@ export class VoiceOver {
     if (this.volume <= 0) return true;
     const a = new Audio(`${this.base}voices/${key}.mp3`);
     a.volume = Math.min(1, this.volume);
-    void a.play().catch(() => undefined);
     this.current = a;
+    a.play().catch((err: Error) => {
+      // Autoplay blocked (no user gesture yet): retry on the next click or key press.
+      console.warn('[voice] blocked:', err.name);
+      const retry = () => {
+        window.removeEventListener('pointerdown', retry, true);
+        window.removeEventListener('keydown', retry, true);
+        if (this.current === a) void a.play().catch(() => undefined);
+      };
+      window.addEventListener('pointerdown', retry, true);
+      window.addEventListener('keydown', retry, true);
+    });
     return true;
   }
 
