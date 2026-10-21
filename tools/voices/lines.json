@@ -1,0 +1,897 @@
+[
+ {
+  "key": "913b1067",
+  "speaker": "narrator",
+  "text": "Neon Bay, 1986. Sunset paints the towers pink as a yellow taxi rolls down Ocean Drive."
+ },
+ {
+  "key": "0c48a9f8",
+  "speaker": "narrator",
+  "text": "In the back seat: Rico Vega, one duffel bag, one laptop, and a job offer from Sunset Shield Security."
+ },
+ {
+  "key": "1f58dddd",
+  "speaker": "rico",
+  "text": "Palm trees, neon, ocean breeze... and somewhere out there, a network begging to be patched."
+ },
+ {
+  "key": "03a8f5c7",
+  "speaker": "narrator",
+  "text": "His pager buzzes. Then the car phone rings."
+ },
+ {
+  "key": "6fbc6a13",
+  "speaker": "max",
+  "text": "Vega? Max Cortez. Welcome to Neon Bay. Hope you packed sunscreen, because the city's on fire."
+ },
+ {
+  "key": "fc8d30bb",
+  "speaker": "max",
+  "text": "Three businesses hit this week. Fake emails, weird traffic, accounts hijacked. Somebody's organizing this."
+ },
+ {
+  "key": "d283ff11",
+  "speaker": "rico",
+  "text": "Somebody with a name?"
+ },
+ {
+  "key": "0a153e93",
+  "speaker": "max",
+  "text": "They sign their work with a pink flamingo. The street calls them the Pink Tide."
+ },
+ {
+  "key": "96db1745",
+  "speaker": "max",
+  "text": "Get to HQ on Ocean Drive. Pink building, big neon sign. You can't miss it — believe me, I've tried."
+ },
+ {
+  "key": "42583fa6",
+  "speaker": "narrator",
+  "text": "Palmetto Bank's systems hum back to life. Backups verified. Accounts locked down. Not a single dollar wired to the Tide."
+ },
+ {
+  "key": "b1aba767",
+  "speaker": "marisol",
+  "text": "Mr. Vega. The board wanted to pay the ransom. I told them to wait for you. I'm glad I did."
+ },
+ {
+  "key": "ae92a2ac",
+  "speaker": "narrator",
+  "text": "At dawn, Neon Bay police arrest a flamboyant figure trying to board a yacht with a pink hard drive."
+ },
+ {
+  "key": "b17b5553",
+  "speaker": "flamingo",
+  "text": "You've won a battle, darling. But somewhere out there, somebody is still reusing their password."
+ },
+ {
+  "key": "b574eebf",
+  "speaker": "max",
+  "text": "He's not wrong. That's why we don't stop. Good work, Vega. Welcome to the crew — for real this time."
+ },
+ {
+  "key": "89f57376",
+  "speaker": "rico",
+  "text": "Same city. New mission. Let's keep it cyber safe."
+ },
+ {
+  "key": "d6d6672d",
+  "speaker": "narrator",
+  "text": "THE END... of chapter one. Neon Bay is still yours to explore: side missions, data shards and the Cyber Lab await."
+ },
+ {
+  "key": "35df278f",
+  "speaker": "max",
+  "text": "Tracker's live, Vega. Every turn that van makes, we see it. Bring it home."
+ },
+ {
+  "key": "fbbcf86f",
+  "speaker": "priya",
+  "text": "Decoded! \"Starlight Pier, midnight.\" The Flamingo loves a dramatic venue."
+ },
+ {
+  "key": "712faa23",
+  "speaker": "narrator",
+  "text": "Taped under the pier railing: a printout of Palmetto Bank's VPN login page, and a pink feather."
+ },
+ {
+  "key": "93e77f35",
+  "speaker": "narrator",
+  "text": "Your first day at Sunset Shield Security. Find the pink tower with the big neon sign on Ocean Drive."
+ },
+ {
+  "key": "3abaae6c",
+  "speaker": "max",
+  "text": "Welcome aboard. Your first paycheck is in your account. Don't spend it all on Hawaiian shirts."
+ },
+ {
+  "key": "ba5412a7",
+  "speaker": "max",
+  "text": "Vega. You found the building. That already puts you ahead of half the applicants."
+ },
+ {
+  "key": "d246cab2",
+  "speaker": "max",
+  "text": "Quick orientation. WASD to move, Shift to run, Space to jump. E talks to people and uses terminals."
+ },
+ {
+  "key": "91c4b660",
+  "speaker": "max",
+  "text": "M opens the city map — click it to drop a waypoint. Tab shows your missions and status. Esc pauses."
+ },
+ {
+  "key": "77d8b0b3",
+  "speaker": "rico",
+  "text": "And cars?"
+ },
+ {
+  "key": "cacfa124",
+  "speaker": "max",
+  "text": "Walk up to one and press E. Company fleet and city car-share. Bring them back with fewer dents than last time."
+ },
+ {
+  "key": "e827d94b",
+  "speaker": "max",
+  "text": "Here's the job. Security is three promises: Confidentiality — only the right people see the data. Integrity — nobody tampers with it. Availability — it's there when we need it."
+ },
+ {
+  "key": "32fe0861",
+  "speaker": "max",
+  "text": "The Pink Tide is breaking all three. Our first lead is Coral Café, down the road. Carla says her email \"smells funny.\""
+ },
+ {
+  "key": "815cd705",
+  "speaker": "max",
+  "text": "Phishing is a fake message pretending to be someone you trust, so you click, pay or type a password."
+ },
+ {
+  "key": "919f30e8",
+  "speaker": "max",
+  "text": "Coral Café's inbox has been getting \"bank alerts\" and \"invoices\". One of them already cost a café down the street its savings."
+ },
+ {
+  "key": "116b596c",
+  "speaker": "max",
+  "text": "Go see Carla. Sort the real mail from the bait, and find the red flags. Then tell her what to do with the worst one."
+ },
+ {
+  "key": "98163dc9",
+  "speaker": "carla",
+  "text": "A fake bank with a zero instead of an O? Those sinvergüenzas! I reported it. Here — pastelitos for the road."
+ },
+ {
+  "key": "1a36f5b2",
+  "speaker": "max",
+  "text": "Nice catch. Dex at the Harbor SOC just called — the café's router was talking to someone it shouldn't. Head to Silicon Harbor."
+ },
+ {
+  "key": "db9a0975",
+  "speaker": "carla",
+  "text": "Rico! Gracias for coming. My inbox is a zoo. The bank says my account is frozen, a supplier wants money, and \"Max\" asked me for gift cards!"
+ },
+ {
+  "key": "609915b6",
+  "speaker": "rico",
+  "text": "Max asked you for gift cards?"
+ },
+ {
+  "key": "47068e5d",
+  "speaker": "carla",
+  "text": "That's what I said! He doesn't even tip. The back-office PC is right there on the terrace. Please, look before I click anything."
+ },
+ {
+  "key": "ff4f97ef",
+  "speaker": "dex",
+  "text": "Every device on a network has an IP address, like a street address. Programs talk through numbered ports, like apartment doors. 443 is HTTPS, 53 is DNS."
+ },
+ {
+  "key": "2c9a83f6",
+  "speaker": "dex",
+  "text": "Our sensors caught a Harbor Cloud workstation calling an outside address every sixty seconds. Like clockwork. Malware loves clockwork."
+ },
+ {
+  "key": "b4b61f25",
+  "speaker": "dex",
+  "text": "The connection table is on the SOC console. Flag the weird stuff, label it, and tell me what we do about it. Coffee's optional. Ha. No it isn't."
+ },
+ {
+  "key": "4a303a35",
+  "speaker": "dex",
+  "text": "Beaconing to 203.0.113.66 on port 4444 — that's a command-and-control channel if I ever saw one. And the Tide's been scanning the data center."
+ },
+ {
+  "key": "ef005d76",
+  "speaker": "dex",
+  "text": "Their firewall is a sieve. Tito at Harbor Cloud is losing his mind. Go help him before he starts salsa dancing out of stress."
+ },
+ {
+  "key": "6b0b6de4",
+  "speaker": "tito",
+  "text": "A firewall is a bouncer for network traffic. It reads its rules top to bottom and the FIRST rule that matches decides. Order matters, like salsa steps."
+ },
+ {
+  "key": "f7496064",
+  "speaker": "tito",
+  "text": "Some genius put \"ALLOW any → any\" at the top of our list. That rule lets EVERYTHING in, so nothing below it matters."
+ },
+ {
+  "key": "3d56754c",
+  "speaker": "tito",
+  "text": "Fix the rules: let customers reach the website, let the web server reach the app, the app reach the database, admins use SSH over the VPN. Block the rest."
+ },
+ {
+  "key": "3ba016c8",
+  "speaker": "tito",
+  "text": "¡Eso! Default deny, tight rules, database hidden from the internet. That's a beautiful ruleset. I might cry."
+ },
+ {
+  "key": "e2a25f84",
+  "speaker": "tito",
+  "text": "Our blocked-connection log just lit up — someone's knocking hard. A white van keeps parking outside. Pink stripe. Call Max."
+ },
+ {
+  "key": "95901794",
+  "speaker": "max",
+  "text": "Tito's white van just turned up near the Tech Market. Pink stripe, no plates. That's the Tide's mobile hotspot — they park it near targets and hack over Wi-Fi."
+ },
+ {
+  "key": "9316cb52",
+  "speaker": "max",
+  "text": "We don't ram anyone, we don't play cop. We tail it and stick a GPS tracker on it, so the police can follow it to their hideout. Legal, documented, boring. I love boring."
+ },
+ {
+  "key": "aba8ecfc",
+  "speaker": "max",
+  "text": "Grab a car, stay close to the van, and keep it in range until the tracker syncs. Don't lose it."
+ },
+ {
+  "key": "0dd50d44",
+  "speaker": "max",
+  "text": "Good driving. Only two palm trees harmed. Personal best for this office."
+ },
+ {
+  "key": "7a6b0c4e",
+  "speaker": "max",
+  "text": "Tracker's live. The van went straight to a warehouse in Silicon Harbor — and it stopped right next to a Harbor Cloud workstation's window."
+ },
+ {
+  "key": "e1fa0424",
+  "speaker": "max",
+  "text": "Physical access plus Wi-Fi. They planted something on that machine. Tito's got it isolated. Go see what's inside."
+ },
+ {
+  "key": "50279c4a",
+  "speaker": "tito",
+  "text": "Malware is software built to do harm — steal data, spy, or lock files for ransom. This workstation's acting possessed."
+ },
+ {
+  "key": "68d96516",
+  "speaker": "tito",
+  "text": "I cut its network the moment the tracker pinged, but it's still powered on, so its memory is intact. That's evidence. Don't yank the plug."
+ },
+ {
+  "key": "0ff69cb2",
+  "speaker": "tito",
+  "text": "The triage console shows its processes, files and startup items. Find the implant, how it survives reboots, and how we contain it."
+ },
+ {
+  "key": "1e496c95",
+  "speaker": "tito",
+  "text": "svch0st with a zero. Cute. The implant came in through an invoice attachment — and it phoned the same address Dex found."
+ },
+ {
+  "key": "a6c75c61",
+  "speaker": "tito",
+  "text": "Dr. Okafor at Bayview University can build a full timeline from the disk image. If anyone can tell us who opened that door, it's her."
+ },
+ {
+  "key": "109989b7",
+  "speaker": "lena",
+  "text": "Digital forensics means reconstructing what happened from the traces systems leave behind — logs, file times, hashes. Like footprints in wet sand."
+ },
+ {
+  "key": "ac1a6411",
+  "speaker": "lena",
+  "text": "Rule one: protect the evidence. Rule two: some of these logs are in UTC and some are local time. Mix them up and you accuse an innocent intern."
+ },
+ {
+  "key": "a5634b1c",
+  "speaker": "lena",
+  "text": "Build me a timeline. Ignore the red herrings. Tell me how they got in, whose account they used, and when the data left."
+ },
+ {
+  "key": "ea0766e8",
+  "speaker": "lena",
+  "text": "Phished credentials, a USB of stolen files, and an exfiltration at 11:10. Clean work. The court would accept this."
+ },
+ {
+  "key": "239b96df",
+  "speaker": "lena",
+  "text": "One more thing: the attackers left an encoded note in the disk image. Priya at the Tech Market loves puzzles. Bring it to her."
+ },
+ {
+  "key": "12a69878",
+  "speaker": "priya",
+  "text": "Ooh, a Pink Tide note! Quick primer: encoding just changes the format — anyone can reverse it. Encryption needs a key. Hashing is a one-way fingerprint."
+ },
+ {
+  "key": "54f9a648",
+  "speaker": "priya",
+  "text": "The Flamingo thinks wrapping text in Base64 and a Caesar shift makes it secret. Spoiler: it does not. Let's peel it."
+ },
+ {
+  "key": "c7c9e63f",
+  "speaker": "priya",
+  "text": "My crypto rig is behind the stall. Decode it, verify the hash, and grab the flag."
+ },
+ {
+  "key": "4025a017",
+  "speaker": "priya",
+  "text": "For the record: Caesar was retired around 50 BC. The Flamingo should update."
+ },
+ {
+  "key": "d6494a75",
+  "speaker": "rico",
+  "text": "Nobody at the pier. Just a pink flamingo sticker on the Ferris wheel... and a printout. A Palmetto Bank network diagram."
+ },
+ {
+  "key": "72ed25a9",
+  "speaker": "max",
+  "text": "The pier was a decoy. The real target is the bank. Everything so far — phishing, the implant, the stolen files — was reconnaissance."
+ },
+ {
+  "key": "cf7b6e28",
+  "speaker": "max",
+  "text": "Marisol Vance runs Palmetto Bank. If the Tide hits tonight, she needs us in the room. Go."
+ },
+ {
+  "key": "a1aa177a",
+  "speaker": "marisol",
+  "text": "Mr. Vega. Ten minutes ago our screens turned pink. Files are being encrypted and there's a ransom note signed with a flamingo."
+ },
+ {
+  "key": "dbfa3b00",
+  "speaker": "marisol",
+  "text": "Incident response is a plan, not a panic: find out what's happening, contain it, remove it, recover, and learn. The board wants to pay. I want options."
+ },
+ {
+  "key": "942c9fdf",
+  "speaker": "marisol",
+  "text": "The incident console is at the help desk. Triage the alerts, run the playbook in the right order, and write the report. The bank is yours."
+ },
+ {
+  "key": "337a4c26",
+  "speaker": "marisol",
+  "text": "Contained, restored from offline backups, and not one cent paid. You may have just saved this bank, Mr. Vega."
+ },
+ {
+  "key": "dc03a912",
+  "speaker": "marisol",
+  "text": "Social engineering means manipulating people instead of computers — a confident voice, a fake emergency, a borrowed uniform."
+ },
+ {
+  "key": "b3c58fac",
+  "speaker": "marisol",
+  "text": "Our help desk is drowning in \"urgent\" calls. Sit in for an hour. Verify through known channels, and say no politely when you must."
+ },
+ {
+  "key": "f0ca83e0",
+  "speaker": "marisol",
+  "text": "The fake CEO called twice. Both times he got our very polite voicemail. Well done."
+ },
+ {
+  "key": "31340457",
+  "speaker": "carla",
+  "text": "Rico, help! I can't log into the café's supplier account, and someone ordered forty kilos of pineapple to my address!"
+ },
+ {
+  "key": "0c986cbe",
+  "speaker": "carla",
+  "text": "I... might use the same password for everything. It's my cat's name and the year I opened the café."
+ },
+ {
+  "key": "90142e77",
+  "speaker": "rico",
+  "text": "Let's see who got in, how, and make sure it never happens again."
+ },
+ {
+  "key": "7b1cfb1f",
+  "speaker": "carla",
+  "text": "A password manager AND a code on my phone? I feel like a spy. A spy with forty kilos of pineapple."
+ },
+ {
+  "key": "8076ac4a",
+  "speaker": "priya",
+  "text": "An \"evil twin\" is a fake Wi-Fi hotspot with a friendly name. Connect to it and the attacker sees everything you send that isn't encrypted."
+ },
+ {
+  "key": "06fc94cf",
+  "speaker": "priya",
+  "text": "The Tide planted \"FreeBeachWiFi\" hotspots on Neon Beach. Take my Wi-Fi analyzer and find all four before the beach crowd logs in. Clock's ticking!"
+ },
+ {
+  "key": "dd6ed158",
+  "speaker": "priya",
+  "text": "All four down! Keep the analyzer — consider it a thank-you. And never auto-join \"Free\" anything."
+ },
+ {
+  "key": "27dbc952",
+  "speaker": "rico",
+  "text": "Rico Vega, Sunset Shield. How can I help?"
+ },
+ {
+  "key": "0a68882c",
+  "speaker": "rico",
+  "text": "Patch first, coffee second."
+ },
+ {
+  "key": "d269111e",
+  "speaker": "rico",
+  "text": "Trust, but verify the sender."
+ },
+ {
+  "key": "f37b7962",
+  "speaker": "max",
+  "text": "Vega. Good. The coffee is terrible and the threats are real."
+ },
+ {
+  "key": "2109d482",
+  "speaker": "max",
+  "text": "Back on deck? Logs don't read themselves."
+ },
+ {
+  "key": "5df7eae2",
+  "speaker": "max",
+  "text": "If it's urgent, it's probably phishing. If it's REALLY urgent, it's definitely phishing."
+ },
+ {
+  "key": "2c1eeb32",
+  "speaker": "max",
+  "text": "Least privilege, Vega. Nobody needs admin to read the lunch menu."
+ },
+ {
+  "key": "8cf04f3e",
+  "speaker": "max",
+  "text": "Defense in depth: if one wall falls, the next one had better be standing."
+ },
+ {
+  "key": "2aa50fe3",
+  "speaker": "max",
+  "text": "An unpatched server is a welcome mat with your address on it."
+ },
+ {
+  "key": "85468acd",
+  "speaker": "max",
+  "text": "In the Navy we said \"loose lips sink ships.\" Now it's loose passwords."
+ },
+ {
+  "key": "f633cf14",
+  "speaker": "max",
+  "text": "Document everything. Future-you will be grateful. Lawyers too."
+ },
+ {
+  "key": "8bef1610",
+  "speaker": "carla",
+  "text": "Rico! Sit, sit. Cafecito is on the house — computers are on you."
+ },
+ {
+  "key": "1872259a",
+  "speaker": "carla",
+  "text": "My nephew says I should \"turn it off and on again.\" I did. Twice."
+ },
+ {
+  "key": "090515c6",
+  "speaker": "carla",
+  "text": "You look hungry. And smart. Mostly hungry."
+ },
+ {
+  "key": "4c86717c",
+  "speaker": "carla",
+  "text": "I wrote my passwords on a sticky note. Then I hid the sticky note. Under the keyboard."
+ },
+ {
+  "key": "99a6376f",
+  "speaker": "carla",
+  "text": "A bank emailed me with a typo in their own name. Even I noticed that one."
+ },
+ {
+  "key": "9b88a3a8",
+  "speaker": "carla",
+  "text": "Now I use one of those password managers. It remembers so I don't have to."
+ },
+ {
+  "key": "294904da",
+  "speaker": "carla",
+  "text": "MFA? Mucho Fantástico Authentication. That's what I call it."
+ },
+ {
+  "key": "1c624508",
+  "speaker": "dex",
+  "text": "Rico! Grab a chair, grab a coffee, grab an alert. We have plenty."
+ },
+ {
+  "key": "43d5e17b",
+  "speaker": "dex",
+  "text": "Three monitors, four energy drinks, five hundred alerts. Normal Tuesday."
+ },
+ {
+  "key": "ffc0d2f3",
+  "speaker": "dex",
+  "text": "Welcome to the SOC. Don't touch the red button. Kidding. There's no red button. Probably."
+ },
+ {
+  "key": "966464d4",
+  "speaker": "dex",
+  "text": "False positives are the price of visibility. Tune, don't ignore."
+ },
+ {
+  "key": "b5b24060",
+  "speaker": "dex",
+  "text": "Beaconing every sixty seconds? Malware loves a schedule."
+ },
+ {
+  "key": "8cb93af4",
+  "speaker": "dex",
+  "text": "Port 23 open to the internet? It's not 1985, people. Well, the music is."
+ },
+ {
+  "key": "b83bd700",
+  "speaker": "dex",
+  "text": "If you can't see it in the logs, it didn't happen. Or worse — it did."
+ },
+ {
+  "key": "48d8fde7",
+  "speaker": "tito",
+  "text": "¡Ey, Rico! Mind the cables — they're color-coded, like my heart."
+ },
+ {
+  "key": "137fb840",
+  "speaker": "tito",
+  "text": "Every packet in this building passes through rules I wrote. Mostly."
+ },
+ {
+  "key": "2f62096a",
+  "speaker": "tito",
+  "text": "You dance? No? Firewall rules are like salsa: order matters."
+ },
+ {
+  "key": "9f703282",
+  "speaker": "tito",
+  "text": "Segment your network. Your printer does NOT need to talk to the database."
+ },
+ {
+  "key": "0de463ac",
+  "speaker": "tito",
+  "text": "First match wins in a firewall. Put your specific rules on top."
+ },
+ {
+  "key": "2a0c55e4",
+  "speaker": "tito",
+  "text": "Default deny. Allow only what the business actually needs."
+ },
+ {
+  "key": "529366c2",
+  "speaker": "tito",
+  "text": "A flat network is a party where every guest has every key."
+ },
+ {
+  "key": "43f45cb7",
+  "speaker": "marisol",
+  "text": "Mr. Vega. You have five minutes. Make them count."
+ },
+ {
+  "key": "a7fa16e1",
+  "speaker": "marisol",
+  "text": "Palmetto Bank runs on trust. I'd like to keep it that way."
+ },
+ {
+  "key": "ebfa3b69",
+  "speaker": "marisol",
+  "text": "Results, Mr. Vega. I can read a report faster than you can apologize."
+ },
+ {
+  "key": "5f625bd5",
+  "speaker": "marisol",
+  "text": "Any change to payment details gets a callback to the number on file. No exceptions."
+ },
+ {
+  "key": "145a6332",
+  "speaker": "marisol",
+  "text": "Our staff are trained to say no to the CEO. Especially to the \"CEO\" who emails from a gmail account."
+ },
+ {
+  "key": "2dbb8b9b",
+  "speaker": "marisol",
+  "text": "Business continuity isn't a document. It's a habit."
+ },
+ {
+  "key": "5d045a12",
+  "speaker": "lena",
+  "text": "Rico. Gloves on, assumptions off."
+ },
+ {
+  "key": "d24cb120",
+  "speaker": "lena",
+  "text": "Evidence first, theories later. Always in that order."
+ },
+ {
+  "key": "c8025ff2",
+  "speaker": "lena",
+  "text": "Ah, the analyst who asks good questions. Welcome to the lab."
+ },
+ {
+  "key": "fd3d98e5",
+  "speaker": "lena",
+  "text": "Never work on the original drive. Image it, hash it, then analyze the copy."
+ },
+ {
+  "key": "2346dc90",
+  "speaker": "lena",
+  "text": "Chain of custody: who touched it, when, and why. Write it down."
+ },
+ {
+  "key": "9142e6d2",
+  "speaker": "lena",
+  "text": "Normalize your time zones before you build a timeline. UTC is your friend."
+ },
+ {
+  "key": "b55d25e9",
+  "speaker": "lena",
+  "text": "Correlation is a clue, not a conviction."
+ },
+ {
+  "key": "853723ca",
+  "speaker": "priya",
+  "text": "Hey Rico! Looking for gadgets or gossip? I have both."
+ },
+ {
+  "key": "c3554481",
+  "speaker": "priya",
+  "text": "Everything here is legit, refurbished and wiped. I checked. Twice."
+ },
+ {
+  "key": "ccf80770",
+  "speaker": "priya",
+  "text": "Found a bug? Report it, don't exploit it. That's the code."
+ },
+ {
+  "key": "716f63dd",
+  "speaker": "priya",
+  "text": "Responsible disclosure: tell the owner, give them time, then talk."
+ },
+ {
+  "key": "0230c369",
+  "speaker": "priya",
+  "text": "That \"FreeBeachWiFi\" network? Not free. You pay with your data."
+ },
+ {
+  "key": "18f98a91",
+  "speaker": "priya",
+  "text": "Base64 isn't encryption. It's just a costume."
+ },
+ {
+  "key": "69534b34",
+  "speaker": "priya",
+  "text": "Hackers don't break in, they log in. Protect your credentials."
+ },
+ {
+  "key": "7c3667fc",
+  "speaker": "flamingo",
+  "text": "Darling. You're late to the party — the Tide already came in."
+ },
+ {
+  "key": "40143da9",
+  "speaker": "flamingo",
+  "text": "Every city has a weakness. Yours wears a lanyard and clicks links."
+ },
+ {
+  "key": "0cbabd63",
+  "speaker": "flamingo",
+  "text": "Security is a costume. I simply change into something more... pink."
+ },
+ {
+  "key": "c54e0527",
+  "speaker": "flamingo",
+  "text": "Your passwords are my playlist, Mr. Vega."
+ },
+ {
+  "key": "33d85912",
+  "speaker": "Local",
+  "text": "My password is my dog's name. He's very secure. He bites."
+ },
+ {
+  "key": "9d2b2c26",
+  "speaker": "Local",
+  "text": "I got a text saying I won a jet ski! I just need to pay the shipping..."
+ },
+ {
+  "key": "323404ca",
+  "speaker": "Local",
+  "text": "Free Wi-Fi on the beach! I'm checking my bank account right now."
+ },
+ {
+  "key": "4229a278",
+  "speaker": "Local",
+  "text": "I never update my phone. The new emojis aren't worth it."
+ },
+ {
+  "key": "92c46618",
+  "speaker": "Local",
+  "text": "My boss emailed me for gift cards. Urgently. Weird, he's on vacation."
+ },
+ {
+  "key": "7a5e5eb2",
+  "speaker": "Local",
+  "text": "I use the same password everywhere. Easier to remember, right?"
+ },
+ {
+  "key": "f08f871f",
+  "speaker": "Local",
+  "text": "I turned on two-factor. Now my phone buzzes when someone tries my account. Creepy, but good."
+ },
+ {
+  "key": "d8612a4b",
+  "speaker": "Local",
+  "text": "Who reads the sender address? The logo looked real!"
+ },
+ {
+  "key": "43eb2ba8",
+  "speaker": "Local",
+  "text": "I back up my photos three ways. Ever since the Great Laptop Flood of '84."
+ },
+ {
+  "key": "170a124a",
+  "speaker": "Local",
+  "text": "Someone called saying they're from \"IT\" and asked for my code. I hung up and called IT back."
+ },
+ {
+  "key": "d814668a",
+  "speaker": "Local",
+  "text": "Found a USB stick in the parking lot. Should I plug it in? ...Nah."
+ },
+ {
+  "key": "dca4cdca",
+  "speaker": "Local",
+  "text": "My router password is still \"admin\". The router is still on my side, I hope."
+ },
+ {
+  "key": "03ad996c",
+  "speaker": "Local",
+  "text": "I hover over links before clicking. My cousin taught me. He works at a bank."
+ },
+ {
+  "key": "74a9a5c2",
+  "speaker": "Local",
+  "text": "Password manager? I have one. It's called a notebook."
+ },
+ {
+  "key": "e8e8d62c",
+  "speaker": "Local",
+  "text": "The website had a padlock, so it's safe! ...That's how it works, right?"
+ },
+ {
+  "key": "02cfbed9",
+  "speaker": "Local",
+  "text": "My smart fridge got hacked. Now it orders pineapple. I hate pineapple."
+ },
+ {
+  "key": "e1b89e65",
+  "speaker": "Local",
+  "text": "I locked my screen when I went to get a coffee. Habit from work."
+ },
+ {
+  "key": "27d781c3",
+  "speaker": "Local",
+  "text": "They said my account would close in 24 hours unless I click. So dramatic."
+ },
+ {
+  "key": "42c433ab",
+  "speaker": "Local",
+  "text": "I shred anything with my name on it. Dumpster divers are real, man."
+ },
+ {
+  "key": "35347eef",
+  "speaker": "Local",
+  "text": "My kid set my password. It's \"password1\". She says the 1 makes it strong."
+ },
+ {
+  "key": "cf9f2165",
+  "speaker": "Local",
+  "text": "Saw a flamingo spray-painted on the bank ATM. Pink Tide, they say."
+ },
+ {
+  "key": "b9efb7e7",
+  "speaker": "Local",
+  "text": "I only download apps from the official store. Learned that the hard way."
+ },
+ {
+  "key": "fe5d9cda",
+  "speaker": "Local",
+  "text": "The guy in the van offered to \"fix my computer for free\". Hard pass."
+ },
+ {
+  "key": "3b909ab2",
+  "speaker": "Local",
+  "text": "Ocean Drive at sunset, my phone at 2%. Paradise."
+ },
+ {
+  "key": "f2e01bb7",
+  "speaker": "Local",
+  "text": "My password has 20 characters. It's three random words and a fish emoji. Okay, no emoji."
+ },
+ {
+  "key": "e3ce8bf4",
+  "speaker": "Local",
+  "text": "Someone left their laptop unlocked at the café. I locked it for them."
+ },
+ {
+  "key": "194393de",
+  "speaker": "Local",
+  "text": "I post my vacation dates online so everyone knows I'm away! ...Wait."
+ },
+ {
+  "key": "fc2f65cc",
+  "speaker": "Local",
+  "text": "My email got hacked. Changed the password and turned on MFA. Never again."
+ },
+ {
+  "key": "47ff7c31",
+  "speaker": "Local",
+  "text": "Did you hear? Somebody at Palmetto Bank almost wired a million to \"the CEO\"."
+ },
+ {
+  "key": "ee387a9a",
+  "speaker": "Local",
+  "text": "I reported a phishing email at work and got a donut. Security pays."
+ },
+ {
+  "key": "f06a11ee",
+  "speaker": "Local",
+  "text": "My bike lock is stronger than my email password. Priorities."
+ },
+ {
+  "key": "593b3f23",
+  "speaker": "Local",
+  "text": "Update available? Later. Always later. Later never comes."
+ },
+ {
+  "key": "8bbcacc6",
+  "speaker": "Local",
+  "text": "I don't click \"Enable Macros\". I don't even know what a macro is."
+ },
+ {
+  "key": "443b8b0d",
+  "speaker": "Local",
+  "text": "They say the Pink Tide uses fake Wi-Fi hotspots. Creepy."
+ },
+ {
+  "key": "4885e37c",
+  "speaker": "Local",
+  "text": "Saw a guy tailgate into the data center. Security guard was on it fast."
+ },
+ {
+  "key": "604d2c66",
+  "speaker": "Local",
+  "text": "My grandma spots scam calls better than anyone. She just asks for their callback number."
+ },
+ {
+  "key": "19b2f283",
+  "speaker": "Local",
+  "text": "I checked the URL. It said \"pa1mettobank\". Nice try."
+ },
+ {
+  "key": "46e1949b",
+  "speaker": "Local",
+  "text": "Sunscreen and software updates: apply regularly."
+ },
+ {
+  "key": "f1ff2c1a",
+  "speaker": "Local",
+  "text": "I gave a quiz app my birthday, pet name and first car. For fun!"
+ },
+ {
+  "key": "d2c0254e",
+  "speaker": "Local",
+  "text": "Encryption? That's when my teenager talks to me."
+ }
+]

@@ -2,7 +2,7 @@ import { NativeRegistry, ScriptVM, bindGameNatives, ScriptHandleError } from '..
 import type { ScriptHost, ScriptInstance } from '../scripting';
 import { missionProgram, MISSION_IDS } from '../scripting/missionSources';
 import type { MissionDef, ObjectiveDef, DialogueLine } from '../missions/types';
-import { CHARACTERS } from '../story/characters';
+import { CHARACTERS, SCRIPT_LINES } from '../story/characters';
 import { PLACES, isWater } from '../world/layout';
 import { POSTS, TERMINALS } from '../world/spots';
 import type { Vehicle, VehicleKind } from '../vehicles/Vehicle';
@@ -234,9 +234,7 @@ export class MissionDirector implements ScriptHost {
     if (what === 'done' || what === 'debrief' || key === 'ending' || what === 'target') return def.completion;
     const talk = def.objectives.find((o): o is Extract<ObjectiveDef, { type: 'talk' }> => o.type === 'talk' && o.npc === who);
     if (talk) return talk.lines;
-    if (key === 'tracker_planted') return [{ speaker: 'max', text: 'Tracker\'s live, Vega. Every turn that van makes, we see it. Bring it home.' }];
-    if (key === 'priya_decoded') return [{ speaker: 'priya', text: 'Decoded! "Starlight Pier, midnight." The Flamingo loves a dramatic venue.' }];
-    if (key === 'pier_clue') return [{ speaker: 'narrator', text: 'Taped under the pier railing: a printout of Palmetto Bank\'s VPN login page — and a pink feather.' }];
+    if (SCRIPT_LINES[key]) return SCRIPT_LINES[key];
     const c = CHARACTERS[who];
     return c ? [{ speaker: who, text: c.greeting[0] }] : [];
   }

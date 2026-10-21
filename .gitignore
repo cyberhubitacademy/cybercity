@@ -3,3 +3,4 @@ dist
 drafts
 *.log
 .claude/settings.local.json
+tools/voices/models

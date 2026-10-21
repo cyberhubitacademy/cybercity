@@ -7,6 +7,7 @@ import { Interactions } from './Interactions';
 import { UI } from '../ui/UI';
 import type { Blip, DialogueLine as UiLine, PauseView, SettingsView, ShopItem as UiShopItem, PracticeRow, ConceptView, MasteryRow } from '../ui/types';
 import { AudioEngine, SfxId } from '../audio/AudioEngine';
+import { VoiceOver } from '../audio/VoiceOver';
 import { SaveManager } from '../progression/SaveManager';
 import { SaveFile, SaveEnvelope } from '../progression/SaveFile';
 import type { PlayerProfile, Settings } from '../progression/types';
@@ -55,6 +56,7 @@ export class Game {
   readonly input: Input;
   readonly ui: UI;
   readonly audio = new AudioEngine();
+  readonly voice = new VoiceOver(import.meta.env.BASE_URL);
   readonly saves = new SaveManager();
   readonly saveFile = new SaveFile();
   readonly markers: WorldMarkers;
@@ -107,9 +109,14 @@ export class Game {
     this.input = new Input(canvas);
     this.ui.showLoading(80, 'Waking up the pedestrians…');
     this.ui.sfx = (n) => this.audio.sfx(n as SfxId);
+    // Piper voice-over for every scripted line; browser speech only as an optional fallback.
+    void this.voice.load();
+    this.ui.lineDuration = (l) => (this.settings.voice > 0 ? this.voice.duration(l.speaker, l.text) : null);
     this.ui.onLine = (l) => {
+      if (this.voice.play(l.speaker, l.text)) return;
       if (this.settings.voiceTTS) this.audio.speak(l.text, ['carla', 'marisol', 'lena', 'priya'].includes(l.speaker) ? 'female' : 'male');
     };
+    this.ui.onDialogueEnd = () => this.voice.stop();
     this.applySettings(this.settings);
     this.wireWorldEvents();
     this.registerStaticInteractions();
@@ -257,6 +264,7 @@ export class Game {
     this.settings = s;
     this.audio.setVolumes({ master: s.master, music: s.music, sfx: s.sfx, ambient: s.ambient, voice: s.voice });
     this.audio.setVoiceEnabled(s.voiceTTS);
+    this.voice.volume = s.voice * s.master;
     this.world.rig.sensitivity = s.mouseSensitivity;
     this.world.rig.invertY = s.invertY;
     this.world.rig.reducedMotion = s.reducedMotion;
@@ -825,7 +833,8 @@ export class Game {
           const line = PEDESTRIAN_LINES[ped.line % PEDESTRIAN_LINES.length];
           ped.line++;
           this.ui.subtitle('Local', line);
-          this.lastSubtitle = 4;
+          this.voice.play('Local', line);
+          this.lastSubtitle = Math.max(4, (this.voice.duration('Local', line) ?? 0) + 0.8);
         },
       });
     } else this.interactions.remove('ped');

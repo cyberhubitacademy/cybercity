@@ -47,6 +47,20 @@ quality to **Low** on older laptops.
 - **Traffic and pedestrians** that react to you; cars, a motorbike and speedboats to drive.
 - **Collectibles:** 12 hidden data shards. **Shop:** Byte Bazaar upgrades and shirts.
 
+## Voices and comic dialogue
+
+Every scripted line is voiced with [Piper TTS](https://github.com/rhasspy/piper) (offline neural TTS), pre-rendered into
+`public/voices/` so voices also work on GitHub Pages. Each character has their own pitch and pace. Conversations and
+cutscenes use comic-book speech bubbles and caption boxes; text is paced to the speech and auto-advances.
+
+Regenerate after editing dialogue (needs Python with `piper-tts`, ffmpeg, and the `en_GB-alan-medium` /
+`en_GB-alba-medium` models in `tools/voices/models/`):
+
+```bash
+npx vite-node tools/voices/extract-lines.ts
+python tools/voices/gen_voices.py tools/voices/models
+```
+
 ## Cybersecurity mini-games
 
 Hand-built challenges with real validation, hints, scoring and explanations:

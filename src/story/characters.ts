@@ -254,3 +254,10 @@ export const ENDING_CUTSCENE: DialogueLine[] = [
   { speaker: 'rico', text: 'Same city. New mission. Let\'s keep it cyber safe.' },
   { speaker: 'narrator', text: 'THE END... of chapter one. Neon Bay is still yours to explore: side missions, data shards and the Cyber Lab await.' },
 ];
+
+/** Extra story beats referenced by mission scripts' SHOW_DIALOGUE ids. */
+export const SCRIPT_LINES: Record<string, DialogueLine[]> = {
+  tracker_planted: [{ speaker: 'max', text: "Tracker's live, Vega. Every turn that van makes, we see it. Bring it home." }],
+  priya_decoded: [{ speaker: 'priya', text: 'Decoded! "Starlight Pier, midnight." The Flamingo loves a dramatic venue.' }],
+  pier_clue: [{ speaker: 'narrator', text: "Taped under the pier railing: a printout of Palmetto Bank's VPN login page, and a pink feather." }],
+};

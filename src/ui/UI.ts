@@ -31,6 +31,10 @@ export class UI {
   sfx: (name: UiSfx) => void = () => {};
   /** Optional hook called for each dialogue line shown (e.g. text-to-speech). */
   onLine: (line: DialogueLine) => void = () => {};
+  /** Seconds of voice-over for a line (null if none); lines auto-advance after it. */
+  lineDuration: (line: DialogueLine) => number | null = () => null;
+  /** Called when a conversation closes or is skipped (stop voice-over). */
+  onDialogueEnd: () => void = () => {};
   private keyStack: KeyHandler[] = [];
   private modals = 0;
   private loading: HTMLElement | null = null;
@@ -257,17 +261,26 @@ export class UI {
       const text = el('div', { class: 'cc-dtext' });
       const hint = el('div', { class: 'cc-dhint' }, 'Click / Space / E to continue');
       const choiceBox = el('div', { class: 'cc-choices' });
-      const dlg = el('div', { class: 'cc-dialog' }, portrait, el('div', {}, speaker, text, choiceBox, hint));
+      const dlg = el('div', { class: 'cc-dialog comic' }, portrait, el('div', { class: 'cc-bubble' }, speaker, text, choiceBox, hint));
+      let auto = 0;
       box.append(dlg);
       let i = -1;
       let typing = 0;
       let full = '';
       let showingChoices = false;
+      let voiceSecs: number | null = null;
+      let lineStart = 0;
       const finishTyping = () => {
         window.clearInterval(typing);
         typing = 0;
         text.textContent = full;
-        if (i === lines.length - 1 && choices && choices.length) showChoices();
+        if (i === lines.length - 1 && choices && choices.length) { showChoices(); return; }
+        // Voiced lines advance on their own once the voice finishes (click skips ahead).
+        if (voiceSecs !== null) {
+          window.clearTimeout(auto);
+          const left = Math.max(0, voiceSecs * 1000 - (performance.now() - lineStart)) + 650;
+          auto = window.setTimeout(() => { if (!typing && !showingChoices) next(); }, left);
+        }
       };
       const showChoices = () => {
         if (showingChoices || !choices) return;
@@ -282,28 +295,41 @@ export class UI {
       const next = () => {
         if (typing) { finishTyping(); return; }
         if (showingChoices) return;
+        window.clearTimeout(auto);
         i++;
         if (i >= lines.length) { end(0); return; }
         const L = lines[i];
         portrait.textContent = initials(L.name);
         portrait.style.background = `radial-gradient(circle at 35% 30%, ${L.color}, #1a0f3a)`;
         portrait.style.color = L.color;
-        speaker.textContent = L.name;
-        speaker.style.color = L.color;
+        const narr = !L.name || L.speaker === 'narrator';
+        dlg.classList.toggle('narr', narr);
+        speaker.textContent = narr ? 'Meanwhile…' : L.name;
+        speaker.style.background = narr ? '' : L.color;
+        dlg.style.setProperty('--who', L.color);
+        dlg.classList.remove('pop');
+        void dlg.offsetWidth;
+        dlg.classList.add('pop');
         full = L.text;
         this.onLine(L);
+        voiceSecs = this.lineDuration(L);
+        lineStart = performance.now();
         if (this.reducedMotion) { text.textContent = full; finishTyping(); return; }
         text.textContent = '';
         let n = 0;
+        // Pace the typewriter to the voice so text and speech finish together.
+        const step = voiceSecs ? Math.max(1, Math.round(full.length / ((voiceSecs * 1000) / 30))) : 2;
         typing = window.setInterval(() => {
-          n += 2;
+          n += step;
           text.textContent = full.slice(0, n);
-          if (n % 6 === 0) this.sfx('type');
+          if (!voiceSecs && n % 6 === 0) this.sfx('type');
           if (n >= full.length) finishTyping();
-        }, 18);
+        }, voiceSecs ? 30 : 18);
       };
       const end = (k: number) => {
         window.clearInterval(typing);
+        window.clearTimeout(auto);
+        this.onDialogueEnd();
         close();
         resolve(k);
       };
