@@ -42,8 +42,8 @@ export function recommendQuality(d: DeviceInfo = readDevice()): Quality {
   const g = d.gpu.toLowerCase();
   let q: Quality;
   if (/rtx|radeon rx [5-9]\d{3}|rx [67]\d{3}|arc a7|apple m[2-9]|apple m1 (pro|max|ultra)/.test(g)) q = 'high';
-  else if (/geforce|gtx|radeon rx|quadro|apple m1|apple gpu|iris xe|arc/.test(g)) q = 'medium';
-  else if (/intel|uhd|hd graphics|mali|adreno|powervr|radeon(tm)? graphics|vega \d/.test(g)) q = 'low';
+  else if (/geforce|gtx|radeon rx|radeon\(tm\) graphics|radeon graphics|quadro|apple m1|apple gpu|iris xe|intel\(r\) arc/.test(g)) q = 'medium';
+  else if (/intel|uhd|hd graphics|mali|adreno|powervr|vega \d/.test(g)) q = 'low';
   else q = 'medium';
   // Weak CPUs or little memory cap the preset regardless of GPU.
   if (d.cores <= 4 || (d.memoryGb !== null && d.memoryGb <= 4)) q = q === 'high' ? 'medium' : 'low';

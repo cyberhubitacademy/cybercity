@@ -1,7 +1,7 @@
 // Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
 window.PROGRESS = {
-  updated: '21/10/2026 17:38:09',
-  now: 'Verified: missions 1, 2, 5 and Rogue Waves end to end; all script references valid. Pushing after each step',
+  updated: '21/10/2026 17:38:41',
+  now: 'Verified auto graphics detection. Pushing after each step',
   tasks: [
     { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
     { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },
@@ -18,7 +18,7 @@ window.PROGRESS = {
     { group: 'Cyber games', name: 'Cipher Puzzle / Forensics Timeline / Malware Triage', weight: 7, done: 100 },
     { group: 'Cyber games', name: 'Detection Engineering Lab + SOC Analyst Night Shift (new)', weight: 6, done: 100 },
     { group: 'Cyber games', name: 'Cyber Arcade: all 1,000+ named challenges across 31 categories', weight: 10, done: 100 },
-    { group: 'Interface', name: 'HUD, minimap, full map, mission-passed screens', weight: 6, done: 90 },
+    { group: 'Interface', name: 'HUD, minimap, full map, mission-passed screens', weight: 6, done: 95 },
     { group: 'Interface', name: 'Main menu, pause, settings, skills, shop, learning journal', weight: 6, done: 90 },
     { group: 'Systems', name: 'XP / money / reputation / save-load', weight: 4, done: 100 },
     { group: 'Systems', name: 'Synthwave radio + sound effects (generated live)', weight: 3, done: 100 },
