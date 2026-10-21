@@ -25,6 +25,8 @@ import { ARCADE_TERMINALS, POSTS, TERMINALS } from '../world/spots';
 import { DISTRICTS, PLACES, SHARDS } from '../world/layout';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { MissionDirector } from './MissionDirector';
+import { readDevice, recommendQuality } from './DeviceProfile';
+import { SETTINGS_KEY } from '../progression/SaveManager';
 
 // Top-level game: menus, the play loop, and the glue between the simulated
 // world, the mission system, cyber challenges, progression and the UI.
@@ -80,11 +82,28 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.settings = this.saves.loadSettings();
+    // First launch on this machine: pick graphics from the hardware.
+    let firstRun = true;
+    try { firstRun = localStorage.getItem(SETTINGS_KEY) === null; } catch { /* storage blocked */ }
+    if (firstRun) {
+      const device = readDevice();
+      this.settings = { ...this.settings, quality: recommendQuality(device), shadows: !device.software };
+      this.saves.saveSettings(this.settings);
+      console.info('[CyberCity] device', device, '→ quality', this.settings.quality);
+    }
     this.profile = this.saves.newProfile();
     this.missions = new MissionManager(MISSIONS);
     this.ui = new UI(uiRoot);
     this.ui.showLoading(10, 'Painting the sunset…');
     this.renderer = new Renderer(canvas, new THREE.Scene(), this.camera, this.settings.quality);
+    this.renderer.onAdjust = ({ shed }) => {
+      // shed level 2+: drop real-time shadows to keep the frame rate up
+      this.world?.env.setShadows(this.settings.shadows && shed < 2);
+    };
+    this.renderer.onContextLost = () => {
+      this.ui.notify('Your graphics driver reset. Progress is saved — reload the page, and try Settings → Graphics → Low if it repeats.', 'warn');
+      this.save();
+    };
     this.ui.showLoading(35, 'Building Neon Bay…');
     this.world = new WorldSim(this.renderer.renderer, this.camera, this.settings.quality);
     this.renderer.setScene(this.world.scene);
@@ -980,7 +999,9 @@ export class Game {
   // ---------------------------------------------------------------- loop
 
   private loop = (): void => {
-    const dt = Math.min(this.clock.getDelta(), 0.05);
+    const raw = this.clock.getDelta();
+    const dt = Math.min(raw, 0.05);
+    this.renderer.govern(raw);
     this.step(dt);
     requestAnimationFrame(this.loop);
   };

@@ -83,11 +83,67 @@ export class Renderer {
     this.composer.addPass(this.grade);
 
     window.addEventListener('resize', this.onResize);
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.onContextLost?.();
+    });
   }
+
+  /** The GPU driver reset or ran out of memory. */
+  onContextLost?: () => void;
+
+  /** Internal resolution multiplier managed by the frame-rate governor (0.5..1). */
+  private resScale = 1;
+  /** 0 = everything on; higher levels progressively disable costly effects. */
+  private shedLevel = 0;
+  private fpsFrames = 0;
+  private fpsTime = 0;
+  private goodStreak = 0;
+  /** Called when the governor changes settings (e.g. to toggle shadows). */
+  onAdjust?: (change: { resScale: number; shed: number; fps: number }) => void;
 
   private pixelRatio(): number {
     const q = this.quality;
-    return Math.min(window.devicePixelRatio, q === 'ultra' ? 2 : q === 'high' ? 1.5 : 1);
+    const base = Math.min(window.devicePixelRatio, q === 'ultra' ? 2 : q === 'high' ? 1.5 : 1);
+    return Math.max(0.4, base * this.resScale);
+  }
+
+  /**
+   * Frame-rate governor: keeps play smooth on any machine. Below ~38 fps it
+   * lowers internal resolution, then sheds ambient occlusion, shadows and bloom;
+   * with sustained headroom it restores them one step at a time.
+   */
+  govern(dtSeconds: number): void {
+    if (document.hidden) return;
+    this.fpsFrames++;
+    this.fpsTime += dtSeconds;
+    if (this.fpsTime < 1.5) return;
+    const fps = this.fpsFrames / this.fpsTime;
+    this.fpsFrames = 0;
+    this.fpsTime = 0;
+    const before = `${this.resScale}|${this.shedLevel}`;
+    if (fps < 38) {
+      this.goodStreak = 0;
+      if (this.resScale > 0.6) this.resScale = Math.round((this.resScale - 0.15) * 100) / 100;
+      else if (this.shedLevel < 3) this.shedLevel++;
+    } else if (fps > 57) {
+      this.goodStreak++;
+      if (this.goodStreak >= 4) {
+        this.goodStreak = 0;
+        if (this.shedLevel > 0) this.shedLevel--;
+        else if (this.resScale < 1) this.resScale = Math.min(1, Math.round((this.resScale + 0.15) * 100) / 100);
+      }
+    } else this.goodStreak = 0;
+    if (`${this.resScale}|${this.shedLevel}` !== before) {
+      if (this.gtao) this.gtao.enabled = this.shedLevel < 1;
+      this.lastW = 0; // force a resize with the new pixel ratio
+      this.onAdjust?.({ resScale: this.resScale, shed: this.shedLevel, fps: Math.round(fps) });
+    }
+  }
+
+  /** Effects the governor has shed (shadows at level 2+, bloom at level 3). */
+  get shed(): number {
+    return this.shedLevel;
   }
 
   private onResize = (): void => {
@@ -107,7 +163,7 @@ export class Renderer {
 
   setLook(exposure: number, night: number, bloomEnabled: boolean): void {
     this.renderer.toneMappingExposure = exposure;
-    this.bloom.enabled = bloomEnabled;
+    this.bloom.enabled = bloomEnabled && this.shedLevel < 3;
     this.bloom.strength = 0.35 + night * 0.75;
     this.bloom.threshold = 0.85 - night * 0.2;
     this.grade.uniforms.night.value = night;

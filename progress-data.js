@@ -1,7 +1,7 @@
 // Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
 window.PROGRESS = {
-  updated: '21/10/2026 17:26:57',
-  now: 'Piper voice acting (179 lines) + comic-book dialogue added and live. Final polish next',
+  updated: '21/10/2026 17:29:34',
+  now: 'PAUSED (usage limit). Pushed: auto graphics detection + frame-rate governor. Open issue: narration voice not heard in some browsers',
   tasks: [
     { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
     { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },
