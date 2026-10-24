@@ -302,7 +302,7 @@ export class WorldSim {
 
     this.rig.update(
       dt, focus,
-      controlsEnabled ? input.mouseDX : 0, controlsEnabled ? input.mouseDY : 0, controlsEnabled ? input.wheel : 0,
+      controlsEnabled ? input.mouseDX : 0, controlsEnabled ? input.mouseDY : 0, 0, // the mouse wheel switches weapons (combat), like GTA on PC
       v ? { yaw: v.yaw, speed: Math.abs(v.speed), length: v.def.length, height: v.height } : null,
     );
     if (!this.vehicle) this.player.hiddenForCamera = this.rig.firstPerson;

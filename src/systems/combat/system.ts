@@ -310,6 +310,10 @@ export class CombatSystem implements GameSystem {
     }
 
     this.arsenal.update(dt) && COMBAT_AUDIO.play('reload');
+    // GTA-style: an emptied magazine reloads by itself
+    const st = this.arsenal.state;
+    if (isFirearm(this.arsenal.active) && st.mag <= 0 && st.reserve > 0 && !this.arsenal.reloading && this.arsenal.startReload()) COMBAT_AUDIO.play('reload');
+    if (this.switchFlash > 0) this.switchFlash -= this.realDt;
     COMBAT_AUDIO.setVolume(ctx.settings().master * ctx.settings().sfx * 0.7);
 
     const onFoot = !w.vehicle && p.active;
@@ -319,8 +323,9 @@ export class CombatSystem implements GameSystem {
 
     // aim / fire intent
     const def = this.arsenal.def;
-    const fire = controls && input.mouseDown(0) && !this.wheelOpen;
-    const firePressed = controls && input.mousePressed(0) && !this.wheelOpen;
+    if (this.eatClick && !input.mouseDown(0)) this.eatClick = false;
+    const fire = controls && input.mouseDown(0) && !this.wheelOpen && !this.eatClick;
+    const firePressed = controls && input.mousePressed(0) && !this.wheelOpen && !this.eatClick;
     const rmb = controls && input.mouseDown(2) && !this.wheelOpen;
     const melee = def.cls === 'melee';
     const canDriveBy = !!w.vehicle && (def.id === 'pistol' || def.id === 'smg' || def.id === 'taser');
@@ -371,7 +376,7 @@ export class CombatSystem implements GameSystem {
     const s = this.arsenal.state;
     const def = this.arsenal.def;
     hud.setWeapon(this.arsenal.active, s.mag, s.reserve, this.arsenal.reloading ? 1 - this.arsenal.reloadT / def.reloadTime : 0, this.arsenal.magSize(s.id));
-    hud.showWeaponPanel(this.arsenal.active !== 'fists' || this.aiming || this.meleeT > 0 || this.wheelOpen);
+    hud.showWeaponPanel(this.arsenal.active !== 'fists' || this.aiming || this.meleeT > 0 || this.wheelOpen || this.switchFlash > 0);
     const showCross = (this.aiming || this.firing || (def.cls === 'melee' && this.meleeT > 0)) && !this.scoped;
     const spread = spreadFor(def, this.aiming, w.player.speed > 0.5, this.arsenal.bloom, this.arsenal.hasUpgrade(def.id, 'scope'));
     const px = (Math.tan(spread) / Math.tan((ctx.camera.fov * Math.PI) / 360)) * (window.innerHeight / 2);
@@ -406,6 +411,8 @@ export class CombatSystem implements GameSystem {
       if (input.isDown('KeyQ')) {
         if (!this.wheelOpen && held > 0.2) this.openWheel();
         if (this.wheelOpen) this.updateWheel();
+        // left click picks the highlighted weapon right away
+        if (this.wheelOpen && input.mousePressed(0)) { this.closeWheel(true); this.eatClick = true; } // also ends the Q hold
       } else {
         if (this.wheelOpen) this.closeWheel(true);
         else if (onFoot) this.toggleCover();
@@ -420,7 +427,9 @@ export class CombatSystem implements GameSystem {
         else this.ctx.notify(`No weapon in slot ${i}. Buy one at [y]Ammu-Bay[/y] downtown.`, 'info');
       }
     }
-    if (input.wasPressed('KeyX')) { this.arsenal.holster(); COMBAT_AUDIO.play('reload'); }
+    // mouse wheel (GTA PC): next / previous weapon, unarmed included
+    if (!this.wheelOpen && input.wheel !== 0) this.cycleWeapon(input.wheel > 0 ? 1 : -1);
+    if (input.wasPressed('KeyX')) { this.arsenal.holster(); this.switchFlash = 1.6; COMBAT_AUDIO.play('reload'); }
     if (onFoot && input.wasPressed('KeyR')) { if (this.arsenal.startReload()) COMBAT_AUDIO.play('reload'); }
     if (input.wasPressed('KeyB')) this.shoulder = -this.shoulder;
     if (input.wasPressed('KeyZ') && (this.aiming || this.focusActive)) {
@@ -432,6 +441,22 @@ export class CombatSystem implements GameSystem {
   }
 
   private qReal = 0;
+  private eatClick = false;
+  private switchFlash = 0;
+
+  /** Step through unarmed + every owned weapon in slot order. */
+  private cycleWeapon(dir: number): void {
+    const a = this.arsenal;
+    const list: WeaponId[] = ['fists', ...[...a.owned.keys()].filter((id) => id !== 'fists').sort((x, y) => WEAPONS[x].slot - WEAPONS[y].slot)];
+    if (list.length < 2) { this.ctx.notify('No weapons yet. Buy one at [y]Ammu-Bay[/y] downtown.', 'info'); return; }
+    const i = Math.max(0, list.indexOf(a.active));
+    const next = list[(i + dir + list.length) % list.length];
+    if (next === 'fists') { if (!a.holstered) a.holster(); }
+    else a.select(next);
+    this.switchFlash = 1.6;
+    COMBAT_AUDIO.play('reload');
+  }
+
   private realHeld(): number {
     // the wheel slows time; measure the hold in real seconds
     if (this.qDown >= 0) this.qReal += this.realDt;
@@ -472,16 +497,14 @@ export class CombatSystem implements GameSystem {
         COMBAT_AUDIO.play('empty');
       }
     }
-    // scroll cycles weapons inside the highlighted slot
+    // scroll moves the highlight around the wheel
     const wheel = this.ctx.input.wheel;
     if (wheel !== 0) {
-      const it = this.wheelItems[this.wheelSel];
-      if (it.slot > 0) {
-        this.arsenal.selectSlot(it.slot);
-        this.wheelItems = this.wheelSlots();
-        this.hud?.openWheel(this.wheelItems);
-        this.hud?.setWheelSelected(this.wheelSel, this.wheelItems[this.wheelSel].label);
-      }
+      const n = this.wheelItems.length;
+      this.wheelSel = (this.wheelSel + (wheel > 0 ? 1 : -1) + n) % n;
+      this.wheelVec.set(0, 0);
+      this.hud?.setWheelSelected(this.wheelSel, this.wheelItems[this.wheelSel].label);
+      COMBAT_AUDIO.play('empty');
     }
   }
 
@@ -559,10 +582,10 @@ export class CombatSystem implements GameSystem {
       }
     }
     if (!a.canFire()) {
-      if (pressed && !a.reloading && a.state.mag <= 0) {
-        if (!this.clickedEmpty) COMBAT_AUDIO.play('empty');
-        this.clickedEmpty = true;
+      if (!a.reloading && a.state.mag <= 0) {
+        // empty: reload automatically (held trigger too), click only when out of ammo
         if (a.startReload()) COMBAT_AUDIO.play('reload');
+        else if (pressed && !this.clickedEmpty) { COMBAT_AUDIO.play('empty'); this.clickedEmpty = true; }
       }
       return;
     }

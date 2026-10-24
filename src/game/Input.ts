@@ -72,8 +72,9 @@ export class Input {
   private onMouseUp = (e: MouseEvent): void => { this.dragging = false; this.buttons.delete(e.button); };
   private onMouseMove = (e: MouseEvent): void => {
     if (!this.enabled) return;
-    // Only a locked (hidden, captured) mouse turns the camera, like GTA: unlimited turning, no screen edges.
-    if (document.pointerLockElement === this.canvas || (this.dragging && !this.captureWanted)) {
+    // A locked (hidden, captured) mouse turns the camera forever, like GTA. If the browser refuses the lock
+    // (embedded views, the short cooldown after Esc), plain mouse movement still turns it so aiming never freezes.
+    if (document.pointerLockElement === this.canvas || this.captureWanted || this.dragging) {
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     }
