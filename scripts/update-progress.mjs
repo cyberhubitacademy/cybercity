@@ -13,4 +13,6 @@ const out = html.includes('<!--DATA-->')
   ? html.replace(/<!--DATA-->[\s\S]*?<!--\/DATA-->/, block)
   : html.replace(/<script>(\r?\n)  function render/, (_m, nl) => `${block}${nl}<script>${nl}  function render`);
 writeFileSync(htmlPath, out);
+// Also publish it with the game (https://cyberhubitacademy.github.io/cybercity/progress.html).
+writeFileSync(resolve(root, 'public', 'progress.html'), out);
 console.log('progress.html updated');
