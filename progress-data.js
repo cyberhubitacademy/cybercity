@@ -1,7 +1,7 @@
 // Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
 window.PROGRESS = {
-  updated: '24/10/2026 11:43:16',
-  now: 'Season 2 (10 missions), 5 new mini-games, cinematics + adaptive music, GTA 5 HUD + tutorial, real CC0 models: integrated. Wiring tutorial + GPS + voices next',
+  updated: '24/10/2026 11:49:23',
+  now: 'Wave 1 building: movement+water, vehicles+garage+races, life sim+phone+activities+animals. Next: combat + crime/police',
   tasks: [
     { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
     { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },
@@ -30,11 +30,18 @@ window.PROGRESS = {
     { group: 'GTA 5 upgrade', name: 'Real 3D cars + GTA-style driving feel', weight: 6, done: 75 },
     { group: 'GTA 5 upgrade', name: 'PBR roads/sidewalks/sand + HDR sky lighting', weight: 4, done: 85 },
     { group: 'GTA 5 upgrade', name: 'GTA 5-style HUD, minimap, mission screens', weight: 4, done: 90 },
-    { group: 'GTA 5 upgrade', name: 'Easy instructions: interactive tutorial + how-to cards', weight: 4, done: 70 },
+    { group: 'GTA 5 upgrade', name: 'Easy instructions: interactive tutorial + how-to cards', weight: 4, done: 75 },
     { group: 'Season 2', name: 'Season 2 story: 8 emotional, futuristic cyber missions', weight: 8, done: 100 },
     { group: 'Season 2', name: '5 new mini-games: Web, Cloud, AI/Deepfake, Power Grid, Supply Chain', weight: 8, done: 100 },
     { group: 'Season 2', name: 'Cinematic cutscenes + epic adaptive mission music', weight: 6, done: 85 },
     { group: 'Season 2', name: 'Piper voices for all new dialogue', weight: 2, done: 0 },
     { group: 'Quality', name: 'Fix narration voice in all browsers', weight: 2, done: 0 },
+    { group: 'GTA life', name: 'Movement: crouch, climb, vault, swim, dive, scuba, breath, parachute, ragdoll', weight: 8, done: 5 },
+    { group: 'GTA life', name: 'Vehicles: suspension, damage, jet ski, kayak, airboat, bikes, helicopter, garage, tuning, races, tram, taxi', weight: 10, done: 5 },
+    { group: 'GTA life', name: 'Life sim: stats, gym, food, sleep, safehouse, shops, barber, tattoos, phone, social feed, camera', weight: 10, done: 5 },
+    { group: 'GTA life', name: 'Activities + animals: fishing, basketball, pool, mini-golf, nightclub, dating, dogs, birds, alligators', weight: 8, done: 5 },
+    { group: 'GTA life', name: 'Combat: weapons, aiming, cover, melee, takedowns, Focus slow-mo, weapon wheel', weight: 10, done: 0 },
+    { group: 'GTA life', name: 'Crime + police: wanted level, witnesses, evasion, robberies, carjacking, fences, stash', weight: 8, done: 0 },
+    { group: 'GTA life', name: 'Amazing graphics pass: hurricanes, city detail, lighting', weight: 6, done: 0 },
   ],
 };

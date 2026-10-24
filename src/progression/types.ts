@@ -93,6 +93,8 @@ export interface PlayerProfile {
   position: { x: number; z: number; yaw: number };
   hour: number;
   stats: { distanceDriven: number; challengesPassed: number };
+  /** Per-gameplay-system saved data (movement, life sim, garage, police...). JSON-safe. */
+  ext: Record<string, unknown>;
 }
 
 export const SAVE_VERSION = 2;

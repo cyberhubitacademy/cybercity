@@ -4,6 +4,10 @@ import type { CollisionWorld } from '../world/Collision';
 // Third-person orbit camera with collision against buildings, smoothing,
 // auto-follow behind vehicles and a little shake on impacts.
 
+/** Fixed chase-camera distance behind the car in meters (no zooming while driving). */
+export const DRIVE_CAMERA_DISTANCE = 6;
+const DRIVE_CAMERA_PITCH = 0.2;
+
 export class CameraRig {
   yaw = Math.PI;
   pitch = 0.22;
@@ -39,22 +43,22 @@ export class CameraRig {
     this.yaw -= mouseDX * k;
     this.pitch += mouseDY * k * (this.invertY ? -1 : 1);
     this.pitch = Math.max(-0.35, Math.min(1.2, this.pitch));
-    this.targetDistance = Math.max(2.5, Math.min(follow ? 16 : 12, this.targetDistance + wheel * 0.8));
+    if (!follow) this.targetDistance = Math.max(2.5, Math.min(12, this.targetDistance + wheel * 0.8));
 
     if (Math.abs(mouseDX) + Math.abs(mouseDY) > 0.5) this.idleMouse = 0;
     else this.idleMouse += dt;
 
-    // Vehicles: swing the camera behind the car when the mouse is idle.
+    // Vehicles: a locked chase camera at one fixed distance behind the car.
+    // No zoom in/out, no speed-based pull-back, no FOV change (player preference).
     if (follow) {
       const desired = follow.yaw + Math.PI;
-      if (this.idleMouse > 1.2 && follow.speed > 2) {
+      if (this.idleMouse > 0.4) {
         let d = desired - this.yaw;
         d = Math.atan2(Math.sin(d), Math.cos(d));
-        this.yaw += d * Math.min(1, dt * 2.5);
-        this.pitch += (0.18 - this.pitch) * Math.min(1, dt * 1.5);
+        this.yaw += d * Math.min(1, dt * 6);
+        this.pitch += (DRIVE_CAMERA_PITCH - this.pitch) * Math.min(1, dt * 4);
       }
-      const want = Math.max(this.targetDistance, 7 + follow.speed * 0.08);
-      this.distance += (want - this.distance) * Math.min(1, dt * 3);
+      this.distance = DRIVE_CAMERA_DISTANCE;
     } else {
       this.distance += (this.targetDistance - this.distance) * Math.min(1, dt * 6);
     }
@@ -79,8 +83,7 @@ export class CameraRig {
       this.shake = Math.max(0, this.shake - dt * 2.5);
     }
     this.camera.lookAt(t.x, lookY, t.z);
-    // Speed sensation: widen FOV while driving fast.
-    const fov = 60 + (follow && !this.reducedMotion ? Math.min(14, follow.speed * 0.28) : 0);
+    const fov = 60;
     if (Math.abs(this.camera.fov - fov) > 0.05) {
       this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 3);
       this.camera.updateProjectionMatrix();

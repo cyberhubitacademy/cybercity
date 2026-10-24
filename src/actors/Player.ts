@@ -24,6 +24,8 @@ export class Player {
   health = 100;
   maxHealth = 100;
   staminaMult = 1;
+  /** Extra speed multiplier from gameplay systems (fitness, injuries, crouching...). */
+  speedMult = 1;
   speed = 0;
   /** Hidden while driving. */
   active = true;
@@ -58,7 +60,7 @@ export class Player {
     if (sprint) this.stamina = Math.max(0, this.stamina - dt / (7 * this.staminaMult));
     else this.stamina = Math.min(1, this.stamina + dt / 4);
 
-    const target = moving ? (sprint ? 7.2 : 3.4) : 0;
+    const target = (moving ? (sprint ? 7.2 : 3.4) : 0) * this.speedMult;
     this.speed += (target - this.speed) * Math.min(1, dt * (moving ? 8 : 10));
 
     if (moving) {

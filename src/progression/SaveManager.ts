@@ -47,6 +47,7 @@ export function newProfile(now = Date.now()): PlayerProfile {
     position: { x: spawn.x, z: spawn.z, yaw: -Math.PI / 2 },
     hour: 16.5,
     stats: { distanceDriven: 0, challengesPassed: 0 },
+    ext: {},
   };
 }
 
@@ -155,6 +156,7 @@ export function validateProfile(input: unknown): PlayerProfile | null {
     position: { x: num(pos.x, base.position.x, -400, 400), z: num(pos.z, base.position.z, -400, 400), yaw: num(pos.yaw, base.position.yaw) },
     hour: num(raw.hour, base.hour, 0, 24) % 24,
     stats: { distanceDriven: num(stats.distanceDriven, 0, 0), challengesPassed: Math.floor(num(stats.challengesPassed, 0, 0)) },
+    ext: isObj(input.ext) ? (JSON.parse(JSON.stringify(input.ext)) as Record<string, unknown>) : {},
   };
 }
 

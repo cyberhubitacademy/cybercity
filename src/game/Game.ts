@@ -27,6 +27,10 @@ import type { Vehicle } from '../vehicles/Vehicle';
 import { MissionDirector } from './MissionDirector';
 import { CinematicCamera } from './Cinematics';
 import { Weather } from '../world/Weather';
+import { SystemRegistry, type GameSystem, type SystemContext } from './Systems';
+
+// Gameplay systems are discovered from src/systems/<name>/index.ts (default export: () => GameSystem).
+const SYSTEM_MODULES = import.meta.glob<{ default: () => GameSystem }>('../systems/*/index.ts', { eager: true });
 import { readDevice, recommendQuality } from './DeviceProfile';
 import { SETTINGS_KEY } from '../progression/SaveManager';
 
@@ -72,6 +76,9 @@ export class Game {
   readonly cinematic: CinematicCamera;
   readonly weather: Weather;
   private timeScale = 1;
+  readonly systems = new SystemRegistry();
+  private sysCtx!: SystemContext;
+  private hudRoot = document.createElement('div');
   private slowUntil = 0;
   private mode: Mode = 'menu';
   /** True while a blocking screen (dialogue, challenge, menu) is open. */
@@ -167,6 +174,7 @@ export class Game {
     this.applySettings(this.settings);
     this.wireWorldEvents();
     this.registerStaticInteractions();
+    this.setupSystems(uiRoot);
     window.addEventListener('pointerdown', () => this.audio.init(), { once: false });
     window.addEventListener('keydown', () => this.audio.init(), { once: false });
     void this.saveFile.restore().then(() => { if (this.mode === 'menu') this.showMainMenu(); });
@@ -177,6 +185,41 @@ export class Game {
     setTimeout(() => this.ui.hideLoading(), 250);
     this.showMainMenu();
     this.loop();
+  }
+
+  // ---------------------------------------------------------------- gameplay systems
+
+  private setupSystems(uiRoot: HTMLElement): void {
+    this.hudRoot.className = 'sys-hud';
+    this.hudRoot.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:6';
+    uiRoot.append(this.hudRoot);
+    for (const [path, mod] of Object.entries(SYSTEM_MODULES)) {
+      try {
+        this.systems.add(mod.default());
+      } catch (err) {
+        console.error('[systems] could not create', path, err);
+      }
+    }
+    const game = this;
+    this.sysCtx = {
+      world: this.world, input: this.input, ui: this.ui, audio: this.audio, scene: this.world.scene, camera: this.camera,
+      interactions: this.interactions, markers: this.markers, hudRoot: this.hudRoot,
+      profile: () => game.profile,
+      settings: () => game.settings,
+      notify: (t, k) => game.ui.notify(t, k ?? 'info'),
+      sfx: (n) => game.audio.sfx(n),
+      addMoney: (n) => {
+        if (n < 0 && game.profile.credits < -n) return false;
+        game.profile.credits += n;
+        return true;
+      },
+      modal: (fn) => game.modal(fn),
+      isBusy: () => game.busy || game.director.inCinematic,
+      save: () => game.save(),
+      getData: <T,>(id: string, fallback: T): T => (id in game.profile.ext ? (game.profile.ext[id] as T) : fallback),
+      setData: (id, v) => { game.profile.ext[id] = v; },
+      system: <T extends GameSystem>(id: string) => game.systems.get<T>(id),
+    };
   }
 
   // ---------------------------------------------------------------- menus
@@ -194,6 +237,7 @@ export class Game {
       onHub: () => void this.modal(() => this.ui.openLearningHub({ concepts: this.conceptViews(), mastery: this.masteryRows(), practice: this.practiceRows() })),
       onControls: () => void this.modal(() => this.ui.controlsScreen()),
       onCredits: () => void this.modal(() => this.ui.credits()),
+      onHowToPlay: () => void this.modal(() => this.ui.openHowToPlay()),
       saveInfo: this.saveSummary(),
       onSaveFile: () => void this.openSaveFileScreen(),
     });
@@ -264,6 +308,7 @@ export class Game {
     await this.ui.fade(false);
     await this.modal(() => this.ui.cutscene(this.lines(INTRO_CUTSCENE), { title: 'Neon Bay, 1986' }));
     this.ui.notify('Head to Sunset Shield HQ on Ocean Drive. Follow the yellow marker.', 'info');
+    this.ui.tutorial.start();
     this.save();
   }
 
@@ -295,6 +340,7 @@ export class Game {
     this.world.rig.snapTo(this.world.player.position, p.position.yaw + Math.PI);
     this.world.hour = p.hour;
     this.applyProfileEffects();
+    this.systems.init(this.sysCtx);
     this.mode = 'playing';
     this.ui.setHudVisible(true);
     this.audio.setMusicMode('world');
@@ -417,6 +463,7 @@ export class Game {
       if (!this.audio.currentStation()) this.audio.setStation(0);
       this.ui.notify(`${v.def.name}. R = radio, Space = handbrake, E = exit.`, 'info');
       this.missionEvent({ type: 'drive' });
+      this.ui.tutorial.signal('enter_vehicle');
     };
     w.events.onExitVehicle = () => {
       this.sfx('door');
@@ -489,6 +536,7 @@ export class Game {
 
   private async talkTo(npc: string): Promise<void> {
     if (this.busy) return;
+    this.ui.tutorial.signal('talk');
     const c = CHARACTERS[npc];
     this.markers.waveAt(npc);
     const a = this.missions.active();
@@ -543,6 +591,7 @@ export class Game {
 
   private async useTerminal(id: string): Promise<void> {
     if (this.busy) return;
+    this.ui.tutorial.signal('terminal');
     if (ARCADE_TERMINALS.has(id)) {
       await this.openArcadeBoard();
       return;
@@ -599,6 +648,7 @@ export class Game {
   }
 
   private async openArcadeBoard(): Promise<void> {
+    this.ui.tutorial.signal('arcade');
     let mod: typeof import('./ArcadeOverlay');
     try {
       mod = await import('./ArcadeOverlay'); // lazy: the arcade content banks are large
@@ -858,6 +908,7 @@ export class Game {
     if (w.vehicle) {
       if (i.wasPressed('KeyE') || i.wasPressed('KeyF')) { w.exitVehicle(); return; }
       if (i.wasPressed('KeyR')) {
+        this.ui.tutorial.signal('radio');
         const name = this.audio.nextStation();
         this.ui.notify(`📻 ${name}`, 'info');
       }
@@ -913,6 +964,7 @@ export class Game {
   }
 
   private async openMap(): Promise<void> {
+    this.ui.tutorial.signal('map');
     await this.modal(() => this.ui.openMap(this.minimapState(), (x, z) => {
       this.waypoint = x === null || z === null ? null : { x, z };
       this.markers.setWaypoint(this.waypoint);
@@ -920,6 +972,7 @@ export class Game {
   }
 
   private async openPause(tab?: PauseView['initialTab']): Promise<void> {
+    this.ui.tutorial.signal('tab');
     const view = this.pauseView(tab);
     await this.modal(() => this.ui.pauseMenu(view));
   }
@@ -997,10 +1050,56 @@ export class Game {
     blips.push({ x: -46, z: -30, kind: 'shop', label: 'Byte Bazaar' });
     for (const t of TERMINALS) if (ARCADE_TERMINALS.has(t.id)) blips.push({ x: t.x, z: t.z, kind: 'terminal', color: '#ffd23f', label: 'Cyber Arcade' });
     if (effects(this.profile).shardRadar) for (const s of SHARDS) if (!this.profile.shards.includes(s.id)) blips.push({ x: s.x, z: s.z, kind: 'shard', label: 'Data shard' });
-    return { x: f.x, z: f.z, heading: w.vehicle ? w.vehicle.yaw : w.player.yaw, camYaw: w.rig.yaw + Math.PI, blips, waypoint: this.waypoint };
+    const dest = this.waypoint ?? (this.director.running ? this.director.target() : a ? objectiveTarget(a.objective) : null);
+    return {
+      x: f.x, z: f.z, heading: w.vehicle ? w.vehicle.yaw : w.player.yaw, camYaw: w.rig.yaw + Math.PI, blips, waypoint: this.waypoint,
+      route: this.gpsRoute(dest), routeColor: this.waypoint ? '#b14dff' : '#ffd23f',
+    };
+  }
+
+  /** Tutorial signals that come from continuous play, plus the threat level. */
+  private trackPlay(): void {
+    const w = this.world;
+    const t = this.ui.tutorial;
+    if (t.active) {
+      if (Math.abs(this.input.mouseDX) + Math.abs(this.input.mouseDY) > 4) t.signal('look');
+      if (!w.vehicle && w.player.speed > 0.5) t.signal('move');
+      if (!w.vehicle && w.player.speed > 5) t.signal('sprint');
+      if (w.vehicle && w.vehicle.kmh > 15) t.signal('drive');
+      const target = this.director.running ? this.director.target() : null;
+      if (target && Math.hypot(target.x - w.focus.x, target.z - w.focus.z) < 9) t.signal('reach_marker');
+    }
+    this.ui.setThreat(this.director.chase ? 3 : 0);
+  }
+
+  /** GPS: shortest road path (BFS over the road grid) from the player to the destination. */
+  private gpsRoute(to: { x: number; z: number } | null): { x: number; z: number }[] | undefined {
+    if (!to) return undefined;
+    const nodes = this.world.traffic.nodes;
+    const f = this.world.focus;
+    const nearest = (x: number, z: number) => {
+      let best = 0, bd = Infinity;
+      for (const n of nodes) {
+        const d = (n.x - x) ** 2 + (n.z - z) ** 2;
+        if (d < bd) { bd = d; best = n.id; }
+      }
+      return best;
+    };
+    const start = nearest(f.x, f.z), goal = nearest(to.x, to.z);
+    const prev = new Map<number, number>([[start, -1]]);
+    const queue = [start];
+    while (queue.length) {
+      const id = queue.shift() as number;
+      if (id === goal) break;
+      for (const l of nodes[id].links) if (!prev.has(l)) { prev.set(l, id); queue.push(l); }
+    }
+    const path: { x: number; z: number }[] = [];
+    for (let id = goal; id !== -1 && id !== undefined; id = prev.get(id) as number) path.unshift({ x: nodes[id].x, z: nodes[id].z });
+    return [{ x: f.x, z: f.z }, ...path, to];
   }
 
   private updateHud(): void {
+    this.trackPlay();
     const w = this.world;
     const p = this.profile;
     const a = this.missions.active();
@@ -1069,6 +1168,8 @@ export class Game {
         const f = w.focus;
         this.audio.ambient({ beach: THREE.MathUtils.clamp((f.x - 120) / 90, 0, 1), night: w.env.night, city: 1 - THREE.MathUtils.clamp((f.x - 150) / 80, 0, 1) });
       }
+      this.world.player.speedMult = this.systems.speedMultiplier();
+      this.systems.update(gdt, this.sysCtx, this.busy || this.director.inCinematic);
       this.weather.update(gdt);
       this.cinematic.update(dt); // overrides the gameplay camera while a shot plays
       this.updateHud();

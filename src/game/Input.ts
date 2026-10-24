@@ -9,6 +9,8 @@ export class Input {
   /** Gameplay input is ignored while a UI screen owns the keyboard. */
   enabled = true;
   private dragging = false;
+  private buttons = new Set<number>();
+  private buttonsPressed = new Set<number>();
 
   constructor(private canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', this.onKeyDown);
@@ -16,6 +18,7 @@ export class Input {
     window.addEventListener('blur', this.onBlur);
     window.addEventListener('mousemove', this.onMouseMove);
     canvas.addEventListener('mousedown', this.onMouseDown);
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault()); // right mouse = aim
     window.addEventListener('mouseup', this.onMouseUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: true });
   }
@@ -30,12 +33,14 @@ export class Input {
   private onBlur = (): void => { this.down.clear(); };
   private onMouseDown = (e: MouseEvent): void => {
     if (!this.enabled) return;
+    if (!this.buttons.has(e.button)) this.buttonsPressed.add(e.button);
+    this.buttons.add(e.button);
     this.dragging = true;
     if (e.button === 0 && document.pointerLockElement !== this.canvas) {
       this.canvas.requestPointerLock?.()?.catch?.(() => undefined);
     }
   };
-  private onMouseUp = (): void => { this.dragging = false; };
+  private onMouseUp = (e: MouseEvent): void => { this.dragging = false; this.buttons.delete(e.button); };
   private onMouseMove = (e: MouseEvent): void => {
     if (!this.enabled) return;
     if (document.pointerLockElement === this.canvas || this.dragging) {
@@ -46,6 +51,16 @@ export class Input {
   private onWheel = (e: WheelEvent): void => {
     if (this.enabled) this.wheel += Math.sign(e.deltaY);
   };
+
+  /** Mouse button held (0 = left, 2 = right). */
+  mouseDown(button: number): boolean {
+    return this.enabled && this.buttons.has(button);
+  }
+
+  /** Mouse button went down this frame. */
+  mousePressed(button: number): boolean {
+    return this.enabled && this.buttonsPressed.has(button);
+  }
 
   isDown(code: string): boolean {
     return this.enabled && this.down.has(code);
@@ -70,6 +85,7 @@ export class Input {
   /** Call at the end of each frame. */
   endFrame(): void {
     this.pressed.clear();
+    this.buttonsPressed.clear();
     this.mouseDX = 0;
     this.mouseDY = 0;
     this.wheel = 0;
