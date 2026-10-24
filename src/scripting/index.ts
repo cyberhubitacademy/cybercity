@@ -16,3 +16,4 @@ export type { VMOptions, ThreadState, InstanceOutcome, TraceEvent } from './vm';
 export { MockHost } from './host';
 export type { ScriptHost, MaybePromise, MockOptions } from './host';
 export { FORMAT_VERSION, HEADER_SIZE, LIMITS, MAGIC, TAG, crc32 } from './bytecode';
+export * from './cinematic';

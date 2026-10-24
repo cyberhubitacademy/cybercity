@@ -1,0 +1,12 @@
+.gr-status { display: flex; gap: 16px; align-items: center; padding: 10px 14px; border-radius: 12px; background: #070616; border: 1px solid rgba(255, 210, 63, 0.4); }
+.gr-rpm { font-size: 20px; font-weight: 700; color: var(--good); transition: color 0.3s; }
+.gr-rpm.danger { color: var(--bad); animation: gr-pulse 0.8s infinite; }
+.gr-zones { display: grid; gap: 6px; }
+.gr-zone { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 8px; border-left: 5px solid; background: var(--panel-2); }
+.gr-it { border-color: #7fb4d6; } .gr-vendor { border-color: var(--orange); } .gr-dmz { border-color: var(--yellow); }
+.gr-scada { border-color: var(--pink); } .gr-plc { border-color: var(--bad); }
+.gr-link { display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--line); }
+.gr-link.allow { border-left-color: var(--good); } .gr-link.deny { border-left-color: var(--bad); } .gr-link.oneway { border-left-color: var(--cyan); }
+.gr-alert { display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--bad); }
+@keyframes gr-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .gr-rpm.danger { animation: none; } }

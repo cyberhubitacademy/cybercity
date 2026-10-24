@@ -1,6 +1,7 @@
 import { COMMANDS, CommandSpec, commandSpec } from './opcodes';
 import type { MaybePromise, ScriptHost } from './host';
-import { ParamType, Pending, ScriptValue, sBool, sFloat, sInt } from './types';
+import { ParamType, Pending, ScriptRuntimeError, ScriptValue, sBool, sFloat, sInt } from './types';
+import { CAMERA_PRESETS, MUSIC_MOODS, WEATHER_KINDS, isCameraPreset, isMusicMood, isWeatherKind } from './cinematic';
 import type { ScriptInstance, ScriptThread, ScriptVM } from './vm';
 
 // Maps script-visible commands (opcodes) to TypeScript handlers.
@@ -64,6 +65,8 @@ export class NativeRegistry {
 // ---- argument helpers (types were already checked by the VM) ----
 const S = (a: ScriptValue[], i: number) => a[i].v as string;
 const N = (a: ScriptValue[], i: number) => a[i].v as number;
+/** Durations are clamped to 0..60 s so a typo can't freeze a cutscene forever. */
+const clampMs = (ms: number) => Math.max(0, Math.min(60000, ms));
 
 /** Convert a host value (or promise) into a Pending that the VM can wait on. */
 function toPending<T>(value: MaybePromise<T>, convert: (v: T) => ScriptValue | undefined): Pending {
@@ -132,5 +135,29 @@ export function bindGameNatives(reg: NativeRegistry, host: ScriptHost): NativeRe
   b('CHASE_START', (_c, a) => toPending(host.chaseStart(N(a, 0), N(a, 1), N(a, 2), N(a, 3)), (v) => sBool(!!v)));
   b('COLLECT_START', (_c, a) => toPending(host.collectStart(S(a, 0), N(a, 1)), (v) => sBool(!!v)));
   b('UNLOCK_NOTE', (_c, a) => host.unlockNote(S(a, 0)));
+  // cinematics / music / atmosphere
+  b('CINEMATIC_START', () => host.cinematicStart());
+  b('CINEMATIC_END', () => host.cinematicEnd());
+  b('CAMERA_SHOT', (_c, a) => {
+    const preset = S(a, 0);
+    if (!isCameraPreset(preset)) throw new ScriptRuntimeError(`unknown camera preset "${preset}" (use ${CAMERA_PRESETS.join(', ')})`);
+    return toPending(host.cameraShot(preset, S(a, 1), clampMs(N(a, 2))), () => undefined);
+  });
+  b('CAMERA_FOLLOW', (_c, a) => toPending(host.cameraFollow(N(a, 0), clampMs(N(a, 1))), () => undefined));
+  b('SHOW_TITLE', (_c, a) => toPending(host.showTitle(S(a, 0), S(a, 1), clampMs(N(a, 2))), () => undefined));
+  b('MUSIC_CUE', (_c, a) => {
+    const mood = S(a, 0);
+    if (!isMusicMood(mood)) throw new ScriptRuntimeError(`unknown music mood "${mood}" (use ${MUSIC_MOODS.join(', ')})`);
+    host.musicCue(mood);
+  });
+  b('SLOW_MOTION', (_c, a) => host.slowMotion(Math.max(0.1, Math.min(1, N(a, 0))), clampMs(N(a, 1))));
+  b('SCREEN_SHAKE', (_c, a) => host.screenShake(Math.max(0, Math.min(1, N(a, 0)))));
+  b('SET_HOUR', (_c, a) => host.setHour(((N(a, 0) % 24) + 24) % 24));
+  b('SET_WEATHER', (_c, a) => {
+    const kind = S(a, 0);
+    if (!isWeatherKind(kind)) throw new ScriptRuntimeError(`unknown weather "${kind}" (use ${WEATHER_KINDS.join(', ')})`);
+    host.setWeather(kind);
+  });
+  b('PLAY_SFX', (_c, a) => host.playSfx(S(a, 0)));
   return reg;
 }

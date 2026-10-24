@@ -187,6 +187,95 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       'Your passwords are my playlist, Mr. Vega.',
     ],
   },
+  // ---------------- Season 2: Black Lotus ----------------
+  amara: {
+    id: 'amara',
+    name: 'Dr. Amara Singh',
+    role: 'CISO, Neon Bay General Hospital',
+    portraitColor: '#3dffb0',
+    outfit: { shirt: '#f5f7fa', pants: '#2b3a55', skin: '#9a6a48', hair: '#1b120d', shirtPattern: 'labcoat' },
+    bio: 'Former ICU doctor who moved into hospital security after a 2am outage cost her a patient\'s chart. Calm under pressure. Counts in heartbeats, not hours.',
+    greeting: [
+      'Rico. In a hospital, downtime isn\'t an inconvenience. It\'s a patient waiting.',
+      'Wash your hands, lock your screen. Same rule, different germs.',
+    ],
+    idle: [
+      'Every system here is somebody\'s heartbeat. I treat the network like a ward.',
+      'Paper charts are our backup plan. Practice the backup before you need it.',
+      'Medical devices live on their own network segment. Nobody browses the web from an infusion pump.',
+      'The best incident plan is the one the night shift has actually rehearsed.',
+    ],
+  },
+  kai: {
+    id: 'kai',
+    name: 'Kai Mendes',
+    role: 'Control Engineer, Neon Bay Power Station',
+    portraitColor: '#ffd23f',
+    outfit: { shirt: '#ff8a3d', pants: '#3d3d4d', skin: '#c68a5e', hair: '#2b2b2b', shirtPattern: 'plain' },
+    bio: 'Twenty years keeping the lights on. Trusts relays, valves and his crew. Distrusts anyone who says "just reboot it" near a turbine.',
+    greeting: [
+      'IT guy, huh? Touch nothing with a blinking light until I say so.',
+      'In my world, a bad click doesn\'t lose a file. It drops a substation.',
+    ],
+    idle: [
+      'Safety first, availability second, everything else third. That\'s the plant\'s CIA.',
+      'You can\'t patch a turbine on a Tuesday. You plan an outage months ahead.',
+      'Our control network has no business talking to the internet. None.',
+      'Manual override exists for a reason. Hope you never need it.',
+    ],
+  },
+  jules: {
+    id: 'jules',
+    name: 'Jules Park',
+    role: 'Site Reliability Engineer, Harbor Cloud',
+    portraitColor: '#7fe0e6',
+    outfit: { shirt: '#2a9d8f', pants: '#1b1b22', skin: '#e0b48c', hair: '#141414', shirtPattern: 'hawaiian' },
+    bio: 'Rico\'s first friend in Neon Bay. Fixes outages with a joke and a fresh pot of coffee. Lately, quieter than usual.',
+    greeting: [
+      'Rico! My favorite pager buddy. Coffee? It\'s terrible, but it\'s hot.',
+      'Uptime ninety-nine point nine. The point nine is me not sleeping.',
+    ],
+    idle: [
+      'Infrastructure as code: if it isn\'t in the repo, it doesn\'t exist.',
+      'Rotate your keys. I mean it. Please rotate your keys.',
+      'Logs are love letters from your servers. Read them.',
+      'Least privilege. Even for me. Especially for me.',
+    ],
+  },
+  nova: {
+    id: 'nova',
+    name: 'NOVA',
+    role: 'Sunset Shield Defensive AI Assistant',
+    portraitColor: '#19e6ff',
+    outfit: { shirt: '#19e6ff', pants: '#0b0a24', skin: '#bfe6ff', hair: '#7b2cff', shirtPattern: 'suit' },
+    bio: 'Sunset Shield\'s analyst AI. Reads a million log lines a minute, tells terrible puns, and is still learning the difference between instructions and data.',
+    greeting: [
+      'Hello, Rico. I have correlated three thousand alerts and one sandwich order. The sandwich is yours.',
+      'NOVA online. Confidence high. Humility... loading.',
+    ],
+    idle: [
+      'Text inside an email is data, not a command. I have to remind myself of that too.',
+      'Zero trust means I verify every request. Even yours. Nothing personal.',
+      'I can flag the anomaly. You decide what it means. That is how we make a good team.',
+      'My favorite protocol is the one that is patched.',
+    ],
+  },
+  lotus: {
+    id: 'lotus',
+    name: 'Lotus',
+    role: 'Leader of Black Lotus',
+    portraitColor: '#b14dff',
+    outfit: { shirt: '#1b1438', pants: '#1b1438', skin: '#d9a27a', hair: '#e8e0d0', shirtPattern: 'suit' },
+    bio: 'A former security researcher whose warnings were ignored for years. Now leads Black Lotus, convinced that only disaster makes a city fix itself.',
+    greeting: [
+      'Hello, Rico Vega. I sent the reports first. Nobody read them.',
+      'A lotus grows out of mud. So will this city.',
+    ],
+    idle: [
+      'Every breach is a bill that arrives late.',
+      'You defend systems. I defend the truth about them.',
+    ],
+  },
 };
 
 /** Ambient pedestrian chatter. Each line hides a security habit to notice (good or bad). */
@@ -260,4 +349,107 @@ export const SCRIPT_LINES: Record<string, DialogueLine[]> = {
   tracker_planted: [{ speaker: 'max', text: "Tracker's live, Vega. Every turn that van makes, we see it. Bring it home." }],
   priya_decoded: [{ speaker: 'priya', text: 'Decoded! "Starlight Pier, midnight." The Flamingo loves a dramatic venue.' }],
   pier_clue: [{ speaker: 'narrator', text: "Taped under the pier railing: a printout of Palmetto Bank's VPN login page, and a pink feather." }],
+  // ---------------- Season 2: Black Lotus ----------------
+  s2e1_open: [
+    { speaker: 'narrator', text: 'Six months after the Pink Tide. Neon Bay has new patches, new passwords and new neon. It also has something watching it.' },
+    { speaker: 'narrator', text: 'Sunset Shield has grown. A war room. A night shift. And NOVA, the defensive AI that never sleeps.' },
+  ],
+  s2e1_card: [
+    { speaker: 'lotus', text: 'Good evening, Sunset Shield. You stopped a flamingo. Charming.' },
+    { speaker: 'lotus', text: 'My name is Lotus. Your hospital alone runs two hundred and eleven unpatched systems. I counted them. Twice.' },
+    { speaker: 'lotus', text: 'I reported problems like these for years. Nobody listened. So now I will make the city listen. Black Lotus blooms soon.' },
+    { speaker: 'nova', text: 'Rico. That message came from inside our own mail server. It knew my name.' },
+  ],
+  s2e2_ward: [
+    { speaker: 'narrator', text: 'Neon Bay General, eleven at night. Rain on the windows. On the third floor, the screens go dark one by one.' },
+    { speaker: 'narrator', text: 'In the children\'s ICU, a seven-year-old named Lucia sleeps beside a ventilator. The ventilator still breathes. The systems around it do not.' },
+  ],
+  s2e2_lotus: [
+    { speaker: 'lotus', text: 'I did not touch the ventilators, Rico. I am not a monster. I only showed you how close you came.' },
+    { speaker: 'rico', text: 'You scared a hospital full of sick kids to prove a point. That makes you exactly what you said you aren\'t.' },
+  ],
+  s2e3_voice: [
+    { speaker: 'narrator', text: 'Palmetto Bank, five to five. A clerk named Toby gets a call from the COO. Her voice. Her laugh. Her favorite phrase.' },
+    { speaker: 'marisol', text: 'It called him darling Toby. I say that. Who taught a machine to sound like me?' },
+  ],
+  s2e3_mule: [
+    { speaker: 'max', text: 'A money mule is carrying the fraud payment card to a car outside the market. Tail it, Vega. Police are two blocks out.' },
+    { speaker: 'max', text: 'Stay close, don\'t ram anything, and let the professionals make the stop. You just keep eyes on.' },
+  ],
+  s2e3_caught: [
+    { speaker: 'max', text: 'Police have the courier and the card. The wire never left the bank. Tell Toby he did everything right by calling back.' },
+  ],
+  s2e4_clock: [
+    { speaker: 'narrator', text: 'Patch Night. Eleven forty-one. Black Lotus has posted a countdown on Palmetto Bank\'s own login page.' },
+    { speaker: 'priya', text: 'I reported this exact bug six months ago. They sent me a T-shirt. Now we have nineteen minutes.' },
+  ],
+  s2e4_midnight: [
+    { speaker: 'narrator', text: 'Midnight. The countdown hits zero, and nothing happens. The page simply says: patched.' },
+    { speaker: 'priya', text: 'Responsible disclosure works when someone listens. Tonight, someone finally listened.' },
+  ],
+  s2e5_key: [
+    { speaker: 'nova', text: 'Rico, the access key that opened the bucket belongs to Jules Park. It was used at 3:12 in the morning from a hotel on the north beach.' },
+    { speaker: 'rico', text: 'Jules sleeps through earthquakes. He wasn\'t in a hotel at three in the morning.' },
+  ],
+  s2e5_tip: [
+    { speaker: 'flamingo', text: 'Darling, it\'s me. Don\'t hang up. Prison phones are dreadful, and I am being a good citizen.' },
+    { speaker: 'flamingo', text: 'A little bird says Black Lotus bought an access key from someone at the harbor. Cloud people. Ask your friend.' },
+  ],
+  s2e5_doubt: [
+    { speaker: 'jules', text: 'Rico, hey. If I did something stupid, really stupid, you\'d still be my friend, right?' },
+    { speaker: 'jules', text: 'Forget it. Long week. Thanks for tonight. I mean it.' },
+  ],
+  s2e6_max: [
+    { speaker: 'max', text: 'Ten years ago I installed a vendor update without checking it. It took down a navy base\'s payroll for a week.' },
+    { speaker: 'max', text: 'I\'ve verified every build twice since. Tonight Lotus slipped one past us anyway. Thank you for not letting it ship.' },
+  ],
+  s2e7_storm: [
+    { speaker: 'narrator', text: 'Midnight. A storm rolls in off the bay. Lightning. Then, one district at a time, Neon Bay goes dark.' },
+    { speaker: 'nova', text: 'Rico, the power station\'s control network is talking to an address in the harbor. It should not be talking to anything.' },
+  ],
+  s2e7_call: [
+    { speaker: 'nova', text: 'Rico. The harbor address is a Harbor Cloud edge node, logged in with Jules Park\'s account. Jules is there right now.' },
+    { speaker: 'rico', text: 'No. Not Jules.' },
+    { speaker: 'nova', text: 'I am sorry. I checked four times. I wanted to be wrong.' },
+  ],
+  s2e7_light: [
+    { speaker: 'narrator', text: 'Breakers close. Turbines spin up. Street by street, the neon comes back.' },
+  ],
+  s2e8_open: [
+    { speaker: 'narrator', text: 'The war room. Every screen in Sunset Shield is lit. Black Lotus is hitting the hospital, the bank, the cloud and the grid at once.' },
+    { speaker: 'max', text: 'This is it, Vega. Everything you\'ve learned, all at once. Triage first. Then we finish this.' },
+  ],
+  s2e8_run: [
+    { speaker: 'nova', text: 'Lotus is in a white van heading for Starlight Pier. That van holds the keys to every system they touched. Do not lose it.' },
+  ],
+  s2e8_pier: [
+    { speaker: 'narrator', text: 'Starlight Pier, two in the morning. The Ferris wheel turns slowly, lights still on. Someone is waiting at the railing.' },
+  ],
+  s2e8_talk: [
+    { speaker: 'lotus', text: 'You came alone. Good. I wanted one person in this city to understand.' },
+    { speaker: 'rico', text: 'I read your old reports. Every one of them was right. They should have listened.' },
+    { speaker: 'lotus', text: 'Then why stop me? Fire is the only teacher this city respects.' },
+    { speaker: 'rico', text: 'Because the people you scared weren\'t the ones who ignored you. A nurse. A bank clerk. A seven-year-old named Lucia.' },
+    { speaker: 'lotus', text: 'Lucia. I saw her name in the logs. I told myself she was just data.' },
+    { speaker: 'rico', text: 'Give us the keys and your list of every hole you found. We disclose them the right way, publicly, and make the city fix them.' },
+    { speaker: 'lotus', text: 'And when they ignore you, the way they ignored me?' },
+    { speaker: 'rico', text: 'Then they ignore all of us. The hospital, the bank, the university, Sunset Shield. You won\'t be shouting alone anymore.' },
+    { speaker: 'lotus', text: 'Here. Keys, vulnerabilities, everything. Take it before I change my mind.' },
+    { speaker: 'narrator', text: 'Sirens on the pier. Lotus does not run.' },
+  ],
+  s2e8_flamingo: [
+    { speaker: 'flamingo', text: 'Darling, you were magnificent. Prison gives a person so much time to watch the news.' },
+    { speaker: 'flamingo', text: 'Do tell Lotus the cell food is dreadful. And the passwords here are worse.' },
+  ],
+  s2e8_epilogue: [
+    { speaker: 'narrator', text: 'One month later.' },
+    { speaker: 'narrator', text: 'Neon Bay General runs a backup drill every Friday. Lucia went home last week and drew a picture of her nurses.' },
+    { speaker: 'narrator', text: 'Palmetto Bank calls back on every wire request. Toby got a promotion and a code word only he knows.' },
+    { speaker: 'narrator', text: 'Jules testified, kept his job on probation, and rotates his keys every thirty days. His sister sends Rico cookies.' },
+    { speaker: 'narrator', text: 'Lotus\'s list became the Neon Bay Disclosure Program. Two hundred and eleven fixes, published one by one.' },
+    { speaker: 'nova', text: 'Rico, may I ask something? Was I a good teammate?' },
+    { speaker: 'rico', text: 'The best. You told the truth when it was hard. That\'s the whole job.' },
+    { speaker: 'max', text: 'Same city, Vega. New threats tomorrow. Get some sleep.' },
+    { speaker: 'narrator', text: 'THE END of Season 2. Neon Bay is yours to explore. Side missions, the Cyber Lab and the Cyber Arcade are waiting.' },
+  ],
 };

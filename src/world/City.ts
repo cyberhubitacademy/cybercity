@@ -5,6 +5,14 @@ import {
 import { CollisionWorld } from './Collision';
 import { FacadeKind, asphalt, billboard, facade, grass, neonSign, sand, sidewalk } from './textures';
 import { ARCADE_TERMINALS, TERMINALS } from './spots';
+import { ASSETS, type SurfaceName } from '../assets/Assets';
+
+/** Photo-scanned PBR material when the asset pack loaded, else null. */
+export function pbr(name: SurfaceName, rx: number, ry: number, color = '#ffffff', normal = 1): THREE.MeshStandardMaterial | null {
+  const s = ASSETS.surface(name, rx, ry);
+  if (!s) return null;
+  return new THREE.MeshStandardMaterial({ ...s, color, roughness: 1, metalness: 0, normalScale: new THREE.Vector2(normal, normal) });
+}
 
 // Builds the static city: ground, blocks, buildings, landmarks. Props (palms,
 // lamps, markings, beach furniture, pier) live in Props.ts.
@@ -138,7 +146,7 @@ export class CityBuilder {
     const tex = asphalt().clone();
     tex.needsUpdate = true;
     tex.repeat.set((landX1 - landX0) / 10, (landZ1 - landZ0) / 10);
-    const road = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, metalness: 0, color: '#d9d6e6' });
+    const road = pbr('asphalt', (landX1 - landX0) / 7, (landZ1 - landZ0) / 7, '#b9b6c2', 1.2) ?? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, metalness: 0, color: '#d9d6e6' });
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(landX1 - landX0, landZ1 - landZ0), road);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set((landX0 + landX1) / 2, 0, (landZ0 + landZ1) / 2);
@@ -163,7 +171,10 @@ export class CityBuilder {
     const st = sand().clone();
     st.needsUpdate = true;
     st.repeat.set((sx1 - sx0) / 12, (sz1 - sz0) / 12);
-    const sandMesh = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ map: st, roughness: 0.95, color: '#e3c596' }));
+    const sandMat = pbr('sand', (sx1 - sx0) / 6, (sz1 - sz0) / 6, '#ffffff', 0.7);
+    // Poly Haven's coast sand is darker than a Florida beach: brighten and warm it.
+    sandMat?.color.setRGB(1.75, 1.5, 1.1);
+    const sandMesh = new THREE.Mesh(sg, sandMat ?? new THREE.MeshStandardMaterial({ map: st, roughness: 0.95, color: '#e3c596' }));
     sandMesh.position.set((sx0 + sx1) / 2, 0, (sz0 + sz1) / 2);
     sandMesh.receiveShadow = true;
     this.group.add(sandMesh);
@@ -187,7 +198,7 @@ export class CityBuilder {
   private lawn(x0: number, z0: number, x1: number, z1: number): void {
     if (!this.grassMat) {
       const t = grass();
-      this.grassMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, color: '#c7f0b0' });
+      this.grassMat = pbr('grass', 1, 1, '#d8f0c0') ?? new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, color: '#c7f0b0' });
     }
     const geo = this.tiledBox(x1 - x0, 0.22, z1 - z0, 8, 8);
     this.mesh(geo, this.grassMat, (x0 + x1) / 2, 0.11, (z0 + z1) / 2, false, true);
@@ -196,7 +207,7 @@ export class CityBuilder {
   // ---------- blocks ----------
 
   private buildBlock(b: Block): void {
-    if (!this.sidewalkMat) this.sidewalkMat = new THREE.MeshStandardMaterial({ map: sidewalk(), roughness: 0.85, color: '#e6dcd6' });
+    if (!this.sidewalkMat) this.sidewalkMat = pbr('sidewalk', 1, 1, '#f2e8e2') ?? new THREE.MeshStandardMaterial({ map: sidewalk(), roughness: 0.85, color: '#e6dcd6' });
     this.sidewalkSlab(b.x0, b.z0, b.x1, b.z1, this.sidewalkMat);
     const key = `${b.col},${b.row}`;
     // Landmark blocks get custom content in buildLandmarks().

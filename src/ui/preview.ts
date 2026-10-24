@@ -27,11 +27,14 @@ const blips: Blip[] = [
   { x: 182, z: -14, kind: 'vehicle' },
   ...SHARDS.slice(0, 4).map((s) => ({ x: s.x, z: s.z, kind: 'shard' as const })),
 ];
-const mm: MinimapState = { x: 196, z: -24, heading: Math.PI, camYaw: Math.PI * 0.75, blips, waypoint: { x: -40, z: 102 } };
+const mm: MinimapState = {
+  x: 196, z: -24, heading: Math.PI, camYaw: Math.PI * 0.75, blips, waypoint: null,
+  route: [{ x: 165, z: -24 }, { x: 165, z: 5 }, { x: 90, z: 5 }, { x: 90, z: 90 }, { x: 5, z: 90 }, { x: -40, z: 102 }],
+};
 
 const hud: HudState = {
   money: 1250, health: 82, maxHealth: 100, stamina: 0.7, level: 3, xp: 340, xpNext: 600, clock: '18:24',
-  objective: 'Go to the Coral Café and talk to Carla.', missionTitle: 'Catch of the Day', timer: null, chase: null,
+  objective: 'Go to the [y]Coral Café[/y] and talk to [b]Carla[/b].', missionTitle: 'Catch of the Day', timer: null, chase: null,
   vehicle: null, radio: null,
 };
 
@@ -102,6 +105,7 @@ function showMenu(): void {
     onHub: () => void ui.openLearningHub({ concepts, mastery, practice, onPractice: (id) => void openChallenge(id) }),
     onControls: () => void ui.controlsScreen(),
     onCredits: () => void ui.credits(),
+    onHowToPlay: () => void ui.openHowToPlay(),
   });
 }
 
@@ -120,7 +124,8 @@ function showHud(): void {
   loop();
   ui.setZone('Neon Beach');
   ui.prompt({ key: 'E', title: 'Talk to Max Cortez', desc: 'Mission: Catch of the Day' });
-  ui.notify('Welcome to Neon Bay! Head to Sunset Shield HQ.', 'info');
+  ui.notify('Press ~E~ to talk to people with a [b]letter[/b] above their head.', 'info');
+  ui.setThreat(2);
   ui.notify('+150 XP', 'xp');
   ui.notify('+$250', 'money');
   ui.districtBanner('Neon Beach');
@@ -145,7 +150,10 @@ const screens: Record<string, () => void> = {
     rewards: ['+150 XP', '$300', 'Community reputation'],
   }).then((ok) => ui.notify(ok ? 'Accepted' : 'Later')),
   passed: () => void ui.missionPassed({ title: 'Catch of the Day', xp: 150, credits: 300, rep: ['Community +10'], levelUps: 1, summary: 'You caught the fake Palmetto Bank email before Carla clicked. Lookalike domains and urgent payment requests are classic phishing tells.', learned: ['Lookalike domains', 'Link inspection', 'Reporting phishing'] }),
-  failed: () => void ui.missionFailed('The Pink Tide van got away. Try staying closer!'),
+  failed: () => void ui.missionFailedRetry('The [r]Pink Tide van[/r] got away. Try staying closer!').then((r) => ui.notify(r ? 'Retry' : 'Continue')),
+  titlecard: () => { showHud(); ui.setCinematic(true); void ui.titleCard('Ghost Protocol', 'Chapter 10', 3500).then(() => ui.setCinematic(false)); },
+  tutorial: () => { showHud(); ui.tutorial.start(undefined, true); (window as unknown as { tut: typeof ui.tutorial }).tut = ui.tutorial; },
+  howto: () => void ui.openHowToPlay(),
   hospital: () => void ui.hospitalized(100),
   challenge: () => void openChallenge(new URLSearchParams(location.search).get('id') ?? 'phishing-1'),
   pause: () => void ui.pauseMenu(pauseView()),

@@ -96,6 +96,9 @@ export const PLACES: Record<string, Place> = {
   carla: { id: 'carla', name: "Carla's Apartment", x: -120, z: -6, icon: 'home' },
   hospital: { id: 'hospital', name: 'Neon Bay General', x: -205, z: 15, icon: 'hospital' },
   spawn: { id: 'spawn', name: 'Ocean Drive', x: 196, z: -24, icon: 'pier' },
+  powerplant: { id: 'powerplant', name: 'Neon Bay Power Station', x: -150, z: 192, icon: 'dc' },
+  docks: { id: 'docks', name: 'Harbor Docks', x: 60, z: 190, icon: 'pier' },
+  warroom: { id: 'warroom', name: 'Sunset Shield War Room', x: 118, z: -54, icon: 'hq' },
 };
 
 /** Intersections of the road grid, used for the traffic graph. */

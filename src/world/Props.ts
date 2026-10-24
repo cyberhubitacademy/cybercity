@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BEACH_X, HARBOR_Z, ROADS_X, ROADS_Z, ROAD_WIDTH, SHORE_X, buildBlocks, mulberry32 } from './layout';
 import { CityBuilder } from './City';
 import { glowSprite } from './textures';
+import { pbr } from './City';
 
 // Instanced street furniture and the beach/pier. Everything repeated many times
 // is an InstancedMesh so the city stays at a few hundred draw calls.
@@ -297,7 +298,7 @@ export class Props {
     const g = this.city.group;
     const x0 = SHORE_X - 12, x1 = 302, z0 = -126, z1 = -114;
     const deckH = 0.45;
-    const wood = new THREE.MeshStandardMaterial({ color: '#c49a6c', roughness: 0.85 });
+    const wood = pbr('deck', 1, 1, '#e8d2b8') ?? new THREE.MeshStandardMaterial({ color: '#c49a6c', roughness: 0.85 });
     const deck = this.city.mesh(this.city.tiledBox(x1 - x0, 0.3, z1 - z0, 4, 4), wood, (x0 + x1) / 2, deckH - 0.15, (z0 + z1) / 2, true, true);
     deck.receiveShadow = true;
     this.city.collision.add({ x0, x1, z0, z1, y0: -2, y1: deckH });

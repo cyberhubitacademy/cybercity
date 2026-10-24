@@ -4,6 +4,9 @@ import type { ChallengeContext, ChallengeDefinition, ChallengeResult, SfxName } 
 import { Hud } from './Hud';
 import { buildMapScreen } from './MapScreen';
 import { controlsPanel, learningHubPanel, settingsPanel } from './Panels';
+import { howToPlayPanel } from './HowToPlay';
+import { Tutorial } from './Tutorial';
+import { rich } from './markup';
 import type {
   BriefingView, DialogueLine, HudState, LearningHubView, MainMenuOptions, MinimapState, MissionPassedView, NotifyKind,
   PauseTab, PauseView, PromptView, SettingsView, ShopBuyResult, ShopItem, SkillRow, TerminalOptions,
@@ -27,6 +30,8 @@ function initials(name: string): string {
  */
 export class UI {
   readonly hud = new Hud();
+  /** Interactive first-play tutorial (call tutorial.start() and tutorial.signal(event)). */
+  readonly tutorial = new Tutorial();
   /** Optional hook for UI sounds (the game wires AudioEngine.sfx here). */
   sfx: (name: UiSfx) => void = () => {};
   /** Optional hook called for each dialogue line shown (e.g. text-to-speech). */
@@ -40,10 +45,13 @@ export class UI {
   private loading: HTMLElement | null = null;
   private menu: HTMLElement | null = null;
   private fadeEl = el('div', { class: 'cc-fade cc-passive' });
+  private cineBars = el('div', { class: 'cc-cine cc-passive' }, el('i', { class: 'top' }), el('i', { class: 'bot' }));
   private reducedMotion = false;
 
   constructor(private root: HTMLElement) {
-    root.append(this.hud.root, this.fadeEl);
+    root.append(this.hud.root, this.cineBars, this.tutorial.root, this.fadeEl);
+    this.tutorial.onHighlight = (a) => this.hud.highlight(a);
+    this.tutorial.onSound = (n) => this.sfx(n);
     window.addEventListener('keydown', this.onKey, true);
   }
 
@@ -125,6 +133,7 @@ export class UI {
     const items: [string, () => void, boolean][] = [
       ['Continue', o.onContinue, o.hasSave],
       ['New Game', o.onNew, true],
+      ...(o.onHowToPlay ? [['How to Play', o.onHowToPlay, true] as [string, () => void, boolean]] : []),
       ...(o.onSaveFile ? [['Save File', o.onSaveFile, true] as [string, () => void, boolean]] : []),
       ['Learning Hub', o.onHub, true],
       ['Settings', o.onSettings, true],
@@ -225,6 +234,35 @@ export class UI {
 
   subtitle(speaker: string | null, text: string | null): void {
     this.hud.subtitle(speaker, text);
+  }
+
+  /** GTA-style wanted stars, shown as the city Threat Level (0..5). */
+  setThreat(level: number): void {
+    this.hud.setThreat(level);
+  }
+
+  /** Cinematic mode: animated letterbox bars; hides HUD, prompt and tips (subtitles stay). */
+  setCinematic(on: boolean): void {
+    this.cineBars.classList.toggle('on', on);
+    this.root.classList.toggle('cc-cinematic', on);
+  }
+
+  /** Big centered mission title card (GTA style). Resolves after `ms`. */
+  async titleCard(title: string, subtitle = '', ms = 3200): Promise<void> {
+    const node = el('div', { class: 'cc-titlecard cc-passive' },
+      el('div', { class: 'cc-tc-title' }, title),
+      subtitle ? el('div', { class: 'cc-tc-sub' }, subtitle) : null);
+    this.root.append(node);
+    this.sfx('whoosh');
+    await wait(this.reducedMotion ? Math.min(ms, 1500) : ms);
+    node.classList.add('out');
+    await wait(this.reducedMotion ? 30 : 600);
+    node.remove();
+  }
+
+  /** Illustrated How to Play guide. */
+  openHowToPlay(): Promise<void> {
+    return this.simpleWindow('HOW TO PLAY', howToPlayPanel(), 1180);
   }
 
   // ---------------- confirm ----------------
@@ -414,9 +452,12 @@ export class UI {
         el('div', { class: 'cc-reward' }, cr, el('div', { class: 'k' }, 'Credits')),
         ...r.rep.map((t) => el('div', { class: 'cc-reward' }, el('div', { class: 'v', style: 'color:var(--pink);font-size:20px' }, t), el('div', { class: 'k' }, 'Reputation'))));
       const cont = el('button', { class: 'cx-btn primary' }, 'Continue (Enter)');
-      const node = el('div', { class: 'cc-passed' },
-        el('div', { class: 'big cc-outline-text' }, 'MISSION PASSED!'),
-        el('div', { class: 'respect cc-outline-text' }, el('span', {}, 'RESPECT +'), '  ', r.title),
+      const node = el('div', { class: 'cc-passed gta' },
+        el('div', { class: 'cc-band' },
+          el('div', { class: 'cc-streak' }),
+          el('div', { class: 'big' }, 'MISSION PASSED'),
+          el('div', { class: 'respect' }, el('span', {}, 'RESPECT ↑')),
+          el('div', { class: 'mtitle' }, r.title)),
         rewards,
         r.levelUps > 0 ? el('div', { class: 'cc-levelup' }, r.levelUps > 1 ? `LEVEL UP ×${r.levelUps}!` : 'LEVEL UP! +1 skill point') : null,
         el('div', { class: 'summary' }, r.summary),
@@ -434,29 +475,37 @@ export class UI {
     });
   }
 
-  private bigBanner(text: string, cls: string, sub: string, sfx: UiSfx): Promise<void> {
+  private bigBanner(text: string, cls: string, sub: string, sfx: UiSfx, retry = false): Promise<boolean> {
     return new Promise((resolve) => {
       this.sfx(sfx);
-      const cont = el('button', { class: 'cx-btn primary' }, 'Continue (Enter)');
-      const node = el('div', { class: 'cc-passed' },
-        el('div', { class: `big ${cls} cc-outline-text` }, text),
-        el('div', { class: 'summary' }, sub),
-        cont);
-      const done = () => { close(); resolve(); };
+      const cont = el('button', { class: 'cx-btn primary' }, retry ? 'Continue (Esc)' : 'Continue (Enter)');
+      const again = retry ? el('button', { class: 'cx-btn primary cc-retry' }, 'Retry (Enter)') : null;
+      const node = el('div', { class: `cc-passed gta ${cls}` },
+        el('div', { class: 'cc-band' }, el('div', { class: `big ${cls}` }, text)),
+        rich(el('div', { class: 'summary' }), sub),
+        el('div', { class: 'cx-row', style: 'justify-content:center' }, again, cont));
+      const done = (v: boolean) => { close(); resolve(v); };
       const close = this.pushModal(node, (e) => {
-        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { done(); return true; }
+        if (retry && e.key === 'Enter') { done(true); return true; }
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { done(false); return true; }
         return false;
       });
-      cont.addEventListener('click', done);
+      cont.addEventListener('click', () => done(false));
+      again?.addEventListener('click', () => done(true));
     });
   }
 
-  missionFailed(reason: string): Promise<void> {
-    return this.bigBanner('MISSION FAILED', 'fail', reason, 'failed');
+  async missionFailed(reason: string): Promise<void> {
+    await this.bigBanner('MISSION FAILED', 'fail', reason, 'failed');
   }
 
-  hospitalized(cost: number): Promise<void> {
-    return this.bigBanner('HOSPITALIZED', 'hosp', `Neon Bay General patched you up. Medical bill: $${cost}. Look both ways on Ocean Drive!`, 'failed');
+  /** GTA V-style failed screen with a Retry button. Resolves true for Retry. */
+  missionFailedRetry(reason: string): Promise<boolean> {
+    return this.bigBanner('MISSION FAILED', 'fail', reason, 'failed', true);
+  }
+
+  async hospitalized(cost: number): Promise<void> {
+    await this.bigBanner('HOSPITALIZED', 'hosp', `Neon Bay General patched you up. Medical bill: [g]$${cost}[/g]. Look both ways on Ocean Drive!`, 'failed');
   }
 
   // ---------------- challenge workstation ----------------
@@ -479,7 +528,8 @@ export class UI {
                 el('span', { class: 'cx-tag' }, `Pass: ${def.passScore}%`)),
               exit),
             el('div', { class: 'cc-shell-obj' }, '🎯 ', def.objective),
-            el('div', { class: 'cc-shell-intro' }, def.intro)),
+            el('div', { class: 'cc-shell-intro' }, def.intro),
+            this.challengeGuide()),
           body,
           el('div', { class: 'cc-scanlines' })));
       let cleanup: (() => void) | null = null;
@@ -515,6 +565,23 @@ export class UI {
         root.append(el('div', { class: 'cx-feedback fail' }, el('h3', {}, 'This workstation crashed (simulation error).'), el('p', {}, String(err))));
       }
     });
+  }
+
+  /** Collapsible "How this challenge works" strip shown above every workstation. */
+  private challengeGuide(): HTMLElement {
+    let seen = false;
+    try { seen = localStorage.getItem('cybercity.shellguide.seen') === '1'; localStorage.setItem('cybercity.shellguide.seen', '1'); } catch { /* ignore */ }
+    const steps = [
+      ['1', 'Read', 'the scenario above: who is under attack and what you must find.'],
+      ['2', 'Investigate', 'click every email, log line, file or rule. Evidence hides in details.'],
+      ['3', 'Submit', 'your answer. The feedback explains every point; then retry or continue.'],
+    ];
+    const d = el('details', { class: 'cc-guide' });
+    if (!seen) d.setAttribute('open', '');
+    d.append(el('summary', {}, 'How this challenge works'),
+      el('div', { class: 'cc-guide-steps' }, ...steps.map(([n, t, x]) => el('div', { class: 'cc-guide-step' }, el('b', {}, n), el('div', {}, el('strong', {}, t), ' ', x)))),
+      rich(el('div', { class: 'cc-guide-tip' }), '💡 Stuck? Press the [y]Hint[/y] button: hints never cost you the mission, and every mistake becomes a lesson in your journal.'));
+    return d;
   }
 
   // ---------------- terminal ----------------
@@ -602,7 +669,7 @@ export class UI {
       this.sfx('open');
       const tabs: [PauseTab, string][] = [
         ['missions', 'Missions'], ['map', 'Map'], ['inventory', 'Inventory'], ['skills', 'Skills'],
-        ['journal', 'Journal'], ['hub', 'Learning Hub'], ['settings', 'Settings'], ['save', 'Save & Quit'],
+        ['journal', 'Journal'], ['hub', 'Learning Hub'], ['howto', 'How to Play'], ['settings', 'Settings'], ['save', 'Save & Quit'],
       ];
       const side = el('div', { class: 'cc-pause-side' }, el('h2', { class: 'neon-title' }, 'PAUSED'), el('div', { class: 'sub' }, 'Neon Bay waits…'));
       const main = el('div', { class: 'cc-pause-main' });
@@ -676,6 +743,7 @@ export class UI {
           }
           return [el('h2', {}, 'Learning Journal'), list];
         },
+        howto: () => [el('h2', {}, 'How to Play'), howToPlayPanel()],
         hub: () => [el('h2', {}, 'Learning Hub'), learningHubPanel({ concepts: p.concepts, mastery: p.mastery, practice: p.practice, onPractice: (id) => { done(); p.onPractice(id); } })],
         settings: () => [el('h2', {}, 'Settings'), settingsPanel(p.settings, (s) => { p.settings = s; p.onSettings(s); this.setReducedMotion(s.reducedMotion); }, p.onResetSave, (t) => this.confirm(t, 'Erase', 'Keep'))],
         save: () => {

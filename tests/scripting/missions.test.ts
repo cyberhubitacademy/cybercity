@@ -9,10 +9,12 @@ const src = (f: string) => MISSION_SOURCES[f.replace(/\.scm$/, '')];
 const challengeMissions = files.filter((f) => /START_CHALLENGE/.test(src(f)));
 
 describe('mission scripts (end to end: compile -> verify -> VM -> MockHost)', () => {
-  it('ships all 12 missions', () => {
+  it('ships all 22 missions', () => {
     expect([...files].sort()).toEqual([
       'm01-welcome.scm', 'm02-phish.scm', 'm03-wire.scm', 'm04-walls.scm', 'm05-chase.scm', 'm06-payload.scm',
-      'm07-footprints.scm', 'm08-cipher.scm', 'm09-final.scm', 'side-password.scm', 'side-social.scm', 'side-wifi.scm',
+      'm07-footprints.scm', 'm08-cipher.scm', 'm09-final.scm',
+      's2-01.scm', 's2-02.scm', 's2-03.scm', 's2-04.scm', 's2-05.scm', 's2-06.scm', 's2-07.scm', 's2-08.scm', 's2-side-1.scm', 's2-side-2.scm',
+      'side-password.scm', 'side-social.scm', 'side-wifi.scm',
     ]);
   });
 
@@ -64,7 +66,7 @@ describe('mission scripts (end to end: compile -> verify -> VM -> MockHost)', ()
   });
 
   it('bundled sources (Vite ?raw) compile through missionSources', () => {
-    expect(MISSION_IDS).toHaveLength(12);
+    expect(MISSION_IDS).toHaveLength(22);
     for (const id of MISSION_IDS) expect(missionProgram(id).instructions.length).toBeGreaterThan(5);
   });
 

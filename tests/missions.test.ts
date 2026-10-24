@@ -5,7 +5,7 @@ import type { MissionDef } from '../src/missions/types';
 import { PLACES } from '../src/world/layout';
 import { TERMINALS, POSTS } from '../src/world/spots';
 
-const CHALLENGE_IDS = ['phishing-1', 'traffic-1', 'firewall-1', 'password-1', 'social-1', 'malware-1', 'forensics-1', 'crypto-1', 'incident-1'];
+const CHALLENGE_IDS = ['phishing-1', 'traffic-1', 'firewall-1', 'password-1', 'social-1', 'malware-1', 'forensics-1', 'crypto-1', 'incident-1', 'detection-1', 'soc-1', 'web-1', 'cloud-1', 'ai-1', 'grid-1', 'supplychain-1'];
 
 function finishWelcome(mm: MissionManager) {
   mm.handle({ type: 'reach', place: 'hq' });

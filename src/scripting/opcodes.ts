@@ -7,6 +7,7 @@ import type { ParamType } from './types';
 //   0x0200-0x02FF  player / world queries and actions
 //   0x0300-0x03FF  entities (vehicles, actors)
 //   0x0400-0x04FF  story & cyber-challenge commands (async)
+//   0x0500-0x05FF  cinematics, music and atmosphere
 
 /** Operand kinds a control opcode accepts in each position. */
 export type OperandKind = 'value' | 'label' | 'var';
@@ -130,6 +131,18 @@ export const COMMANDS: CommandSpec[] = [
   { opcode: 0x0404, name: 'CHASE_START', params: ['int', 'int', 'float', 'int'], returns: 'bool', async: true, doc: 'Tail a vehicle: tagSeconds within radius before timeLimit (s).' },
   { opcode: 0x0405, name: 'COLLECT_START', params: ['str', 'int'], returns: 'bool', async: true, doc: 'Timed collect of an item set (seconds).' },
   { opcode: 0x0406, name: 'UNLOCK_NOTE', params: ['str'], doc: 'Show an "unlocked" notification.' },
+  // ---- cinematics / music / atmosphere ----
+  { opcode: 0x0500, name: 'CINEMATIC_START', params: [], doc: 'Letterbox on, HUD hidden, player controls frozen.' },
+  { opcode: 0x0501, name: 'CINEMATIC_END', params: [], doc: 'Back to gameplay: letterbox off, HUD and controls restored.' },
+  { opcode: 0x0502, name: 'CAMERA_SHOT', params: ['str', 'str', 'int'], async: true, doc: 'Camera shot: preset (establish, orbit, closeup, over_shoulder, flyover, skyline), target (place id, npc id, or "city"), duration ms. Waits until the shot ends.' },
+  { opcode: 0x0503, name: 'CAMERA_FOLLOW', params: ['int', 'int'], async: true, doc: 'Cinematic chase camera on a vehicle handle for N ms.' },
+  { opcode: 0x0504, name: 'SHOW_TITLE', params: ['str', 'str', 'int'], async: true, doc: 'Mission title card (title, subtitle) for N ms.' },
+  { opcode: 0x0505, name: 'MUSIC_CUE', params: ['str'], doc: 'Crossfade the score to a mood: calm, tension, action, chase, sorrow, hope, triumph, villain, stealth, epic, none.' },
+  { opcode: 0x0506, name: 'SLOW_MOTION', params: ['float', 'int'], doc: 'Time scale (0.1..1) for N real milliseconds.' },
+  { opcode: 0x0507, name: 'SCREEN_SHAKE', params: ['float'], doc: 'Camera shake impulse (0..1).' },
+  { opcode: 0x0508, name: 'SET_HOUR', params: ['float'], doc: 'Jump the clock to an hour of day (0..24).' },
+  { opcode: 0x0509, name: 'SET_WEATHER', params: ['str'], doc: 'Weather: clear, rain or storm.' },
+  { opcode: 0x050a, name: 'PLAY_SFX', params: ['str'], doc: 'Play a sound effect by name.' },
 ];
 
 const commandByName = new Map(COMMANDS.map((c) => [c.name, c]));

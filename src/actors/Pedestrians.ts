@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Humanoid, Outfit } from './Humanoid';
+import type { Outfit } from './Humanoid';
+import { createRig, type Rig } from './CharacterModel';
 import { Block } from '../world/layout';
 import type { CollisionWorld } from '../world/Collision';
 
@@ -15,7 +16,7 @@ const STYLES: Outfit['hairStyle'][] = ['short', 'long', 'bun', 'bald', 'curly'];
 const PATTERNS: Outfit['pattern'][] = ['plain', 'plain', 'hawaiian', 'plain', 'suit'];
 
 interface Ped {
-  rig: Humanoid;
+  rig: Rig;
   pos: THREE.Vector3;
   yaw: number;
   block: Block;
@@ -56,7 +57,7 @@ export class Pedestrians {
 
   spawnAround(center: THREE.Vector3): void {
     while (this.peds.length < this.poolSize) {
-      const rig = new Humanoid(this.outfit());
+      const rig = createRig(this.outfit(), { female: this.rnd() < 0.5, seed: this.peds.length });
       this.scene.add(rig.root);
       const ped: Ped = {
         rig, pos: new THREE.Vector3(), yaw: 0, block: this.blocks[0], corner: 0, dir: 1,

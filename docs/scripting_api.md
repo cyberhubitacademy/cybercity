@@ -144,3 +144,26 @@ npx vite-node tools/scmc.ts -- missions/sample-getaway.scm --hex --trace
 ```
 
 Errors print as `file:line:col: message` and exit with code 1.
+
+## Cinematics, music and atmosphere (0x05xx)
+
+| Opcode | Command | Args | Async | Notes |
+| --- | --- | --- | --- | --- |
+| 0x0500 | `CINEMATIC_START` | — | | Letterbox on, HUD hidden, player controls frozen. |
+| 0x0501 | `CINEMATIC_END` | — | | Back to gameplay. The engine also ends any cinematic when a mission ends, fails or is cancelled. |
+| 0x0502 | `CAMERA_SHOT` | preset `str`, target `str`, ms `int` | yes | Presets: `establish`, `orbit`, `flyover` (target = place id), `closeup`, `over_shoulder` (target = npc id), `skyline` (target `"city"`). Waits until the shot ends. |
+| 0x0503 | `CAMERA_FOLLOW` | vehicle `int`, ms `int` | yes | Cinematic chase camera on a spawned vehicle handle. Stale handle → thread error. |
+| 0x0504 | `SHOW_TITLE` | title `str`, subtitle `str`, ms `int` | yes | Mission title card. |
+| 0x0505 | `MUSIC_CUE` | mood `str` | | `calm`, `tension`, `action`, `chase`, `sorrow`, `hope`, `triumph`, `villain`, `stealth`, `epic`, `none`. Crossfades ~2.5 s; any mood ducks the radio, `none` hands back to it. |
+| 0x0506 | `SLOW_MOTION` | factor `float`, ms `int` | | Time scale clamped to 0.1..1 for N real milliseconds. |
+| 0x0507 | `SCREEN_SHAKE` | strength `float` | | Impulse, clamped 0..1. |
+| 0x0508 | `SET_HOUR` | hour `float` | | Jump the clock (wrapped to 0..24). |
+| 0x0509 | `SET_WEATHER` | kind `str` | | `clear`, `rain`, `storm` (storm adds lightning + thunder). |
+| 0x050a | `PLAY_SFX` | name `str` | | Any sound-effect name the AudioEngine knows (`alert`, `crash`, `whoosh`, …). |
+
+Durations are clamped to 0..60000 ms. An unknown preset, mood or weather fails the thread with the source line,
+for example `m10.scm:14 [thread 1]: unknown music mood "jazz" (use calm, tension, …)`.
+
+Host methods (`ScriptHost`): `cinematicStart()`, `cinematicEnd()`, `cameraShot(preset, target, ms)`,
+`cameraFollow(vehicle, ms)`, `showTitle(title, subtitle, ms)`, `musicCue(mood)`, `slowMotion(factor, ms)`,
+`screenShake(strength)`, `setHour(hour)`, `setWeather(kind)`, `playSfx(name)`.

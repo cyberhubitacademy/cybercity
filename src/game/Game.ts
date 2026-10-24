@@ -25,6 +25,8 @@ import { ARCADE_TERMINALS, POSTS, TERMINALS } from '../world/spots';
 import { DISTRICTS, PLACES, SHARDS } from '../world/layout';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { MissionDirector } from './MissionDirector';
+import { CinematicCamera } from './Cinematics';
+import { Weather } from '../world/Weather';
 import { readDevice, recommendQuality } from './DeviceProfile';
 import { SETTINGS_KEY } from '../progression/SaveManager';
 
@@ -67,6 +69,10 @@ export class Game {
   profile: PlayerProfile;
   missions: MissionManager;
   readonly director: MissionDirector;
+  readonly cinematic: CinematicCamera;
+  readonly weather: Weather;
+  private timeScale = 1;
+  private slowUntil = 0;
   private mode: Mode = 'menu';
   /** True while a blocking screen (dialogue, challenge, menu) is open. */
   private busy = false;
@@ -110,6 +116,9 @@ export class Game {
     this.markers = new WorldMarkers(this.world.scene);
     // story characters are solid, like everyone else in Neon Bay
     for (const p of POSTS) this.world.city.collision.add({ x0: p.x - 0.35, x1: p.x + 0.35, z0: p.z - 0.35, z1: p.z + 0.35, y0: 0, y1: 1.8, solidForCars: true });
+    this.cinematic = new CinematicCamera(this.camera);
+    this.weather = new Weather(this.world.scene, this.camera, this.settings.quality);
+    this.weather.onThunder = (strength) => { this.sfx('crash'); this.cinematic.shake(strength * 0.3); };
     this.director = new MissionDirector(this.world, {
       dialogue: (lines) => this.modal(() => this.ui.dialogue(this.lines(lines))).then(() => undefined),
       notify: (t, k) => this.ui.notify(t, k),
@@ -126,6 +135,23 @@ export class Game {
       onObjective: () => this.refreshMarkers(),
       addMoney: (n) => { this.profile.credits += n; },
       isPlayerDead: () => this.world.player.health <= 0,
+      cinematic: (on) => {
+        this.ui.setCinematic(on);
+        this.input.enabled = !on;
+        if (on) this.input.releasePointer();
+      },
+      cameraShot: (preset, target, ms) => this.cinematic.play({ preset, target, durationMs: ms }),
+      cameraFollow: (v, ms) => this.cinematic.follow(v.root, ms),
+      showTitle: (title, sub, ms) => this.ui.titleCard(title, sub, ms),
+      musicCue: (mood) => this.audio.setScore(mood),
+      slowMotion: (factor, ms) => { this.timeScale = factor; this.slowUntil = performance.now() + ms; },
+      shake: (strength) => { this.world.rig.addShake(strength); this.cinematic.shake(strength); },
+      setHour: (h) => { this.world.hour = h; },
+      setWeather: (k) => this.weather.set(k),
+      playSfx: (name) => {
+        const ok: SfxId[] = ['click', 'good', 'bad', 'type', 'alert', 'open', 'pickup', 'levelup', 'passed', 'failed', 'crash', 'horn', 'door', 'whoosh', 'beep', 'cash'];
+        if ((ok as string[]).includes(name)) this.audio.sfx(name as SfxId);
+      },
     });
     this.input = new Input(canvas);
     this.ui.showLoading(80, 'Waking up the pedestrians…');
@@ -289,6 +315,7 @@ export class Game {
     this.world.rig.sensitivity = s.mouseSensitivity;
     this.world.rig.invertY = s.invertY;
     this.world.rig.reducedMotion = s.reducedMotion;
+    if (this.cinematic) this.cinematic.reducedMotion = s.reducedMotion;
     this.ui.setReducedMotion(s.reducedMotion);
     this.world.env.setShadows(s.shadows);
     this.renderer.renderer.shadowMap.enabled = s.shadows && s.quality !== 'low';
@@ -658,6 +685,9 @@ export class Game {
     } else {
       this.ui.notify(`Replay finished: ${def.title}`, 'good');
     }
+    // Missions without a giver (e.g. the Season 2 opener) auto-start: run their script.
+    const next = this.missions.active();
+    if (next && !this.director.running) this.director.start(next.def, false);
     this.onObjectiveChanged();
   }
 
@@ -817,7 +847,7 @@ export class Game {
 
   private handleKeys(): void {
     const i = this.input;
-    if (this.busy) return;
+    if (this.busy || this.director.inCinematic) return;
     if (i.wasPressed('Escape')) { void this.openPause(); return; }
     if (i.wasPressed('Tab')) { void this.openPause('missions'); return; }
     if (i.wasPressed('KeyI')) { void this.openPause('inventory'); return; }
@@ -1021,11 +1051,14 @@ export class Game {
       this.camera.lookAt(90, 10, -40);
     } else {
       this.handleKeys();
+      // Slow motion scales game time only; UI and camera keep real time.
+      if (this.timeScale < 1 && performance.now() > this.slowUntil) this.timeScale = 1;
+      const gdt = dt * this.timeScale;
       if (!this.busy) {
-        w.update(dt, this.input, true);
+        w.update(gdt, this.input, !this.director.inCinematic);
         this.updateDynamicInteractions();
-        this.updateMissionFrame(dt);
-        this.markers.update(dt, w.time, w.focus);
+        this.updateMissionFrame(gdt);
+        this.markers.update(gdt, w.time, w.focus);
         this.hornCooldown -= dt;
         this.autosave += dt;
         if (this.autosave > 30) { this.autosave = 0; this.save(); }
@@ -1036,9 +1069,13 @@ export class Game {
         const f = w.focus;
         this.audio.ambient({ beach: THREE.MathUtils.clamp((f.x - 120) / 90, 0, 1), night: w.env.night, city: 1 - THREE.MathUtils.clamp((f.x - 150) / 80, 0, 1) });
       }
+      this.weather.update(gdt);
+      this.cinematic.update(dt); // overrides the gameplay camera while a shot plays
       this.updateHud();
     }
-    this.renderer.setLook(w.env.exposure, w.env.night, this.settings.bloom);
+    // weather darkens the scene; lightning flashes light it up
+    w.env.hemi.intensity += this.weather.flash * 2.5;
+    this.renderer.setLook(w.env.exposure * (1 - this.weather.gloom * 0.35), w.env.night, this.settings.bloom);
     this.renderer.render();
     this.input.endFrame();
   }

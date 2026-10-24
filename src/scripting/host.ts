@@ -1,4 +1,5 @@
 import { ScriptHandleError } from './types';
+import type { CameraPreset, MusicMood, WeatherKind } from './cinematic';
 
 // The engine-facing side of the native API. The game implements ScriptHost;
 // scripts only ever see integer handles and strings, never engine objects.
@@ -54,6 +55,19 @@ export interface ScriptHost {
   chaseStart(vehicle: number, tagSeconds: number, radius: number, timeLimit: number): MaybePromise<boolean>;
   collectStart(itemSet: string, timeLimit: number): MaybePromise<boolean>;
   unlockNote(text: string): void;
+  // ---- cinematics / music / atmosphere ----
+  cinematicStart(): void;
+  cinematicEnd(): void;
+  /** preset is validated before the call; target is a place id, npc id or "city". */
+  cameraShot(preset: CameraPreset, target: string, ms: number): MaybePromise<void>;
+  cameraFollow(vehicle: number, ms: number): MaybePromise<void>;
+  showTitle(title: string, subtitle: string, ms: number): MaybePromise<void>;
+  musicCue(mood: MusicMood): void;
+  slowMotion(factor: number, ms: number): void;
+  screenShake(strength: number): void;
+  setHour(hour: number): void;
+  setWeather(kind: WeatherKind): void;
+  playSfx(name: string): void;
 }
 
 export interface MockOptions {
@@ -186,4 +200,18 @@ export class MockHost implements ScriptHost {
     return this.later('collect', r);
   }
   unlockNote(text: string): void { this.rec(`UNLOCK_NOTE ${text}`); }
+  cinematic = false;
+  mood: MusicMood = 'none';
+  weather: WeatherKind = 'clear';
+  cinematicStart(): void { this.cinematic = true; this.rec('CINEMATIC_START'); }
+  cinematicEnd(): void { this.cinematic = false; this.rec('CINEMATIC_END'); }
+  cameraShot(preset: CameraPreset, target: string, ms: number): MaybePromise<void> { this.rec(`CAMERA_SHOT ${preset} ${target} ${ms}`); return this.later(`shot ${preset}`, undefined); }
+  cameraFollow(vehicle: number, ms: number): MaybePromise<void> { this.handle(vehicle); this.rec(`CAMERA_FOLLOW ${vehicle} ${ms}`); return this.later('follow', undefined); }
+  showTitle(title: string, subtitle: string, ms: number): MaybePromise<void> { this.rec(`SHOW_TITLE ${title} | ${subtitle} ${ms}`); return this.later('title', undefined); }
+  musicCue(mood: MusicMood): void { this.mood = mood; this.rec(`MUSIC_CUE ${mood}`); }
+  slowMotion(factor: number, ms: number): void { this.rec(`SLOW_MOTION ${factor} ${ms}`); }
+  screenShake(strength: number): void { this.rec(`SCREEN_SHAKE ${strength}`); }
+  setHour(hour: number): void { this.rec(`SET_HOUR ${hour}`); }
+  setWeather(kind: WeatherKind): void { this.weather = kind; this.rec(`SET_WEATHER ${kind}`); }
+  playSfx(name: string): void { this.rec(`PLAY_SFX ${name}`); }
 }

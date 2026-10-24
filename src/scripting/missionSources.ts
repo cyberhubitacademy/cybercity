@@ -12,6 +12,16 @@ import m09 from '../../missions/m09-final.scm?raw';
 import sideSocial from '../../missions/side-social.scm?raw';
 import sidePassword from '../../missions/side-password.scm?raw';
 import sideWifi from '../../missions/side-wifi.scm?raw';
+import s2_01 from '../../missions/s2-01.scm?raw';
+import s2_02 from '../../missions/s2-02.scm?raw';
+import s2_03 from '../../missions/s2-03.scm?raw';
+import s2_04 from '../../missions/s2-04.scm?raw';
+import s2_05 from '../../missions/s2-05.scm?raw';
+import s2_06 from '../../missions/s2-06.scm?raw';
+import s2_07 from '../../missions/s2-07.scm?raw';
+import s2_08 from '../../missions/s2-08.scm?raw';
+import s2_side_1 from '../../missions/s2-side-1.scm?raw';
+import s2_side_2 from '../../missions/s2-side-2.scm?raw';
 
 // Mission sources bundled into the build (Vite `?raw`), compiled on first use.
 // Compiling at load time keeps the .scm files the single source of truth;
@@ -30,6 +40,16 @@ export const MISSION_SOURCES: Record<string, string> = {
   'side-social': sideSocial,
   'side-password': sidePassword,
   'side-wifi': sideWifi,
+  's2-01': s2_01,
+  's2-02': s2_02,
+  's2-03': s2_03,
+  's2-04': s2_04,
+  's2-05': s2_05,
+  's2-06': s2_06,
+  's2-07': s2_07,
+  's2-08': s2_08,
+  's2-side-1': s2_side_1,
+  's2-side-2': s2_side_2,
 };
 
 const cache = new Map<string, { bytes: Uint8Array; program: Program }>();

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Water } from 'three/examples/jsm/objects/Water.js';
 import { waterNormals } from './textures';
+import { ASSETS } from '../assets/Assets';
 
 // Day/night cycle with a physically based (Preetham) sky, image-based lighting
 // from that sky, a sun with soft shadows, and a reflective ocean.
@@ -94,6 +95,7 @@ export class Environment {
   private moon: THREE.Mesh;
   readonly water: Water | THREE.Mesh;
   private pmrem: THREE.PMREMGenerator;
+  private hdrTargets: { day?: THREE.WebGLRenderTarget; sunset?: THREE.WebGLRenderTarget } = {};
   private envScene = new THREE.Scene();
   private envSky: THREE.Mesh;
   private envSkyMat = makeSkyMaterial();
@@ -254,8 +256,24 @@ export class Environment {
       wu.waterColor.value.set(this.night > 0.5 ? '#06283f' : '#0a8fa8');
     }
 
+    // Photo-captured HDR skies give realistic reflections by day and at sunset;
+    // the procedural sky bake takes over at night or if the HDRs are missing.
+    const hdrKey = this.night > 0.6 ? null : hour >= 16.2 && hour < 20.5 ? 'sunset' : hour >= 5.5 && hour < 7.5 ? 'sunset' : 'day';
+    if (hdrKey && ASSETS.hdri[hdrKey]) {
+      if (!this.hdrTargets[hdrKey]) {
+        const t = ASSETS.hdri[hdrKey];
+        if (t) {
+          t.mapping = THREE.EquirectangularReflectionMapping;
+          this.hdrTargets[hdrKey] = this.pmrem.fromEquirectangular(t);
+        }
+      }
+      const target = this.hdrTargets[hdrKey];
+      if (target && this.scene.environment !== target.texture) this.scene.environment = target.texture;
+      this.scene.environmentIntensity = (hdrKey === 'day' ? 0.75 : 0.6) * (1 - this.night) + 0.12;
+      return;
+    }
     // Re-bake the reflection environment when the sun has moved noticeably.
-    if (this.sunDir.angleTo(this.lastEnvSun) > 0.03 || Math.abs(hour - this.lastEnvHour) > 0.25 || !this.envTarget) {
+    if (this.sunDir.angleTo(this.lastEnvSun) > 0.03 || Math.abs(hour - this.lastEnvHour) > 0.25 || !this.envTarget || this.scene.environment !== this.envTarget.texture) {
       this.lastEnvHour = hour;
       this.lastEnvSun.copy(this.sunDir);
       const eu = this.envSkyMat.uniforms;

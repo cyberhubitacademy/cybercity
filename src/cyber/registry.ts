@@ -10,6 +10,11 @@ import { forensicsChallenge } from './challenges/forensics';
 import { malwareChallenge } from './challenges/malware';
 import { detectionChallenge } from './challenges/detection';
 import { socChallenge } from './challenges/soc';
+import { webChallenge } from './challenges/web';
+import { cloudChallenge } from './challenges/cloud';
+import { aiChallenge } from './challenges/ai';
+import { gridChallenge } from './challenges/grid';
+import { supplyChainChallenge } from './challenges/supplychain';
 
 export const CHALLENGES: ChallengeDefinition[] = [
   phishingChallenge,
@@ -23,6 +28,11 @@ export const CHALLENGES: ChallengeDefinition[] = [
   incidentChallenge,
   detectionChallenge,
   socChallenge,
+  webChallenge,
+  cloudChallenge,
+  aiChallenge,
+  gridChallenge,
+  supplyChainChallenge,
 ];
 
 const byId = new Map(CHALLENGES.map((c) => [c.id, c]));

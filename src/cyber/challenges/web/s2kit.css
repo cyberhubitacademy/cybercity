@@ -1,0 +1,31 @@
+/* Season 2 shared challenge styling */
+.s2-root { gap: 16px; }
+.s2-step { display: flex; gap: 12px; align-items: center; margin: 6px 0 2px; }
+.s2-step h4 { margin: 0; font-size: 18px; color: var(--cyan-soft); }
+.s2-stepnum {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 30px;
+  font-family: var(--font-display); background: linear-gradient(135deg, var(--pink), var(--purple)); box-shadow: var(--glow-pink);
+}
+.s2-meter { height: 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; flex: 1; min-width: 80px; }
+.s2-meter > div { height: 100%; background: linear-gradient(90deg, var(--orange), var(--yellow)); transition: width 0.5s cubic-bezier(0.2, 1.2, 0.4, 1); }
+.s2-meter.low > div { background: linear-gradient(90deg, var(--bad), var(--orange)); }
+.s2-meter.high > div { background: linear-gradient(90deg, var(--cyan), var(--good)); }
+.s2-meterwrap { display: flex; align-items: center; gap: 10px; }
+.s2-line { display: grid; grid-template-columns: minmax(140px, 1.2fr) 2fr auto; gap: 10px; align-items: center; }
+.s2-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.s2-choice { text-align: left; white-space: normal; line-height: 1.25; }
+.s2-order { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.s2-orderitem { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.s2-defense { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(61, 255, 154, 0.08); border: 1px solid rgba(61, 255, 154, 0.35); }
+.s2-feedback { animation: s2-in 0.35s ease-out; }
+.s2-code {
+  font-family: var(--font-mono); font-size: 13px; white-space: pre-wrap; word-break: break-word;
+  background: #070616; border: 1px solid rgba(25, 230, 255, 0.25); border-radius: 8px; padding: 8px 10px; margin: 4px 0;
+}
+.s2-code.bad { border-color: rgba(255, 77, 109, 0.6); }
+.s2-code.good { border-color: rgba(61, 255, 154, 0.6); }
+.s2-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line); text-transform: uppercase; letter-spacing: 0.5px; }
+.s2-flash { animation: s2-flash 0.6s ease-out; }
+@keyframes s2-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes s2-flash { 0% { box-shadow: 0 0 0 0 rgba(25, 230, 255, 0.9); } 100% { box-shadow: 0 0 0 14px rgba(25, 230, 255, 0); } }
+@media (max-width: 760px) { .s2-line { grid-template-columns: 1fr; } }

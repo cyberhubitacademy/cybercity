@@ -114,3 +114,23 @@ Other checks: wrong argument counts, `-> var` on a command without a result,
 duplicate/undefined labels, duplicate declarations, out-of-range integers,
 over-long strings, unbalanced `IF`/`WHILE`, opcode-prefix mismatches, and
 missing `SCRIPT_START`/`SCRIPT_END`.
+
+## Writing a cinematic scene
+
+Cinematic commands are ordinary commands; async ones (`CAMERA_SHOT`, `CAMERA_FOLLOW`, `SHOW_TITLE`) wait until
+they finish, so a cutscene reads top to bottom:
+
+```
+CINEMATIC_START
+MUSIC_CUE "sorrow"
+SET_WEATHER "rain"
+SHOW_TITLE "CODE BLUE" "Neon Bay General, 02:13" 3000
+CAMERA_SHOT "establish" "hospital" 4000
+CAMERA_SHOT "closeup" "amara" 2500
+SHOW_DIALOGUE "m11.amara_plea"
+MUSIC_CUE "action"
+CINEMATIC_END
+```
+
+Always pair `CINEMATIC_START` with `CINEMATIC_END` (the engine closes it for you if the mission ends early),
+and return the score to the radio with `MUSIC_CUE "none"` when the mission's big moment is over.

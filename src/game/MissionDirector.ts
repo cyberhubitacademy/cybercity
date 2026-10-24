@@ -1,5 +1,7 @@
 import { NativeRegistry, ScriptVM, bindGameNatives, ScriptHandleError } from '../scripting';
-import type { ScriptHost, ScriptInstance } from '../scripting';
+import type { ScriptHost, ScriptInstance, CameraPreset, MusicMood, WeatherKind } from '../scripting';
+import { NPC_PRESETS } from '../scripting/cinematic';
+import type { ShotTarget } from './Cinematics';
 import { missionProgram, MISSION_IDS } from '../scripting/missionSources';
 import type { MissionDef, ObjectiveDef, DialogueLine } from '../missions/types';
 import { CHARACTERS, SCRIPT_LINES } from '../story/characters';
@@ -23,6 +25,18 @@ export interface DirectorCallbacks {
   onObjective(): void;
   addMoney(amount: number): void;
   isPlayerDead(): boolean;
+  // ---- cinematics (optional until wired; missing ones resolve immediately / no-op) ----
+  /** Letterbox on, HUD hidden, controls frozen (on = true) or back to gameplay. */
+  cinematic?(on: boolean): void;
+  cameraShot?(preset: CameraPreset, target: ShotTarget, ms: number): Promise<void>;
+  cameraFollow?(vehicle: Vehicle, ms: number): Promise<void>;
+  showTitle?(title: string, subtitle: string, ms: number): Promise<void>;
+  musicCue?(mood: MusicMood): void;
+  slowMotion?(factor: number, ms: number): void;
+  shake?(strength: number): void;
+  setHour?(hour: number): void;
+  setWeather?(kind: WeatherKind): void;
+  playSfx?(name: string): void;
 }
 
 const COLORS: Record<string, string> = { pink: '#ff2fa0', cyan: '#19e6ff', yellow: '#ffd23f', red: '#ff4d6d', purple: '#b14dff' };
@@ -51,6 +65,9 @@ export class MissionDirector implements ScriptHost {
   collect: { items: { id: string; x: number; z: number; label: string }[]; found: Set<string>; resolve: (v: boolean) => void } | null = null;
   /** Dialogue ids already covered by the briefing shown at acceptance. */
   private skipBrief = false;
+  /** True between CINEMATIC_START and CINEMATIC_END. */
+  inCinematic = false;
+  private moodSet = false;
 
   constructor(private world: WorldSim, private cb: DirectorCallbacks) {
     this.vm = new ScriptVM(bindGameNatives(new NativeRegistry(), this));
@@ -96,6 +113,16 @@ export class MissionDirector implements ScriptHost {
   }
 
   private cleanup(): void {
+    // Never leave the player stuck in a cutscene, slow motion or a mission score.
+    if (this.inCinematic) {
+      this.inCinematic = false;
+      this.cb.cinematic?.(false);
+    }
+    if (this.moodSet) {
+      this.moodSet = false;
+      this.cb.musicCue?.('none');
+    }
+    this.cb.slowMotion?.(1, 0);
     this.objective = null;
     this.waypoint = null;
     this.blips.clear();
@@ -380,4 +407,56 @@ export class MissionDirector implements ScriptHost {
     });
   }
   unlockNote(text: string): void { this.cb.notify(text, 'good'); }
+
+  // ---- cinematics / music / atmosphere ----
+
+  /** Resolve a shot target: place id, npc id (closeup/over_shoulder) or "city". */
+  private shotTarget(preset: CameraPreset, target: string): ShotTarget {
+    const f = this.world.focus;
+    const player = { x: f.x, z: f.z };
+    if (preset === 'skyline' || target === 'city') return { x: 60, z: -60, player, kind: 'city' };
+    if (NPC_PRESETS.has(preset)) {
+      const post = POSTS.find((p) => p.npc === target);
+      if (!post) throw new Error(`unknown character "${target}" for ${preset}`);
+      return { x: post.x, z: post.z, facing: post.facing, player, kind: 'npc' };
+    }
+    const place = PLACES[target];
+    if (place) return { x: place.x, z: place.z, player, kind: 'place' };
+    const post = POSTS.find((p) => p.npc === target);
+    if (post) return { x: post.x, z: post.z, facing: post.facing, player, kind: 'npc' };
+    throw new Error(`unknown camera target "${target}"`);
+  }
+
+  cinematicStart(): void {
+    this.inCinematic = true;
+    this.cb.cinematic?.(true);
+  }
+  cinematicEnd(): void {
+    this.inCinematic = false;
+    this.cb.cinematic?.(false);
+  }
+  cameraShot(preset: CameraPreset, target: string, ms: number): Promise<void> {
+    const t = this.shotTarget(preset, target);
+    return this.cb.cameraShot ? this.cb.cameraShot(preset, t, ms) : Promise.resolve();
+  }
+  cameraFollow(vehicle: number, ms: number): Promise<void> {
+    const v = this.entities.get(vehicle);
+    if (!v) return Promise.reject(new ScriptHandleError(vehicle));
+    return this.cb.cameraFollow ? this.cb.cameraFollow(v, ms) : Promise.resolve();
+  }
+  showTitle(title: string, subtitle: string, ms: number): Promise<void> {
+    return this.cb.showTitle ? this.cb.showTitle(title, subtitle, ms) : Promise.resolve();
+  }
+  musicCue(mood: MusicMood): void {
+    this.moodSet = mood !== 'none';
+    this.cb.musicCue?.(mood);
+  }
+  slowMotion(factor: number, ms: number): void { this.cb.slowMotion?.(factor, ms); }
+  screenShake(strength: number): void { this.cb.shake?.(strength); }
+  setHour(hour: number): void {
+    if (this.cb.setHour) this.cb.setHour(hour);
+    else this.world.hour = hour;
+  }
+  setWeather(kind: WeatherKind): void { this.cb.setWeather?.(kind); }
+  playSfx(name: string): void { this.cb.playSfx?.(name); }
 }

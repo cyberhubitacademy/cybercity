@@ -1,0 +1,8 @@
+.cl-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.cl-res { display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--bad); transition: border-color 0.3s, box-shadow 0.3s; }
+.cl-res.tried { border-left-color: var(--warn); }
+.cl-res.fixed { border-left-color: var(--good); box-shadow: 0 0 18px rgba(61, 255, 154, 0.2); }
+.cl-finding { font-weight: 700; color: #ffd0d8; }
+.cl-res.fixed .cl-finding { color: var(--good); text-decoration: line-through; }
+.cl-posture { display: flex; gap: 16px; align-items: center; padding: 10px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.cl-q { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }

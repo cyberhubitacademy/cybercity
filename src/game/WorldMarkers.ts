@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Humanoid, Outfit } from '../actors/Humanoid';
+import type { Outfit } from '../actors/Humanoid';
+import { createRig, type Rig } from '../actors/CharacterModel';
 import { CHARACTERS } from '../story/characters';
 import { POSTS, TERMINALS } from '../world/spots';
 import { SHARDS } from '../world/layout';
@@ -50,7 +51,7 @@ class Cylinder {
 
 interface StoryNpc {
   id: string;
-  rig: Humanoid;
+  rig: Rig;
   icon: THREE.Sprite;
   pos: THREE.Vector3;
   baseYaw: number;
@@ -79,7 +80,7 @@ export class WorldMarkers {
         hairStyle: post.npc === 'lena' ? 'bun' : post.npc === 'carla' || post.npc === 'priya' || post.npc === 'marisol' ? 'long' : post.npc === 'dex' ? 'curly' : 'short',
         sunglasses: post.npc === 'tito', shoes: '#1b1b22',
       };
-      const rig = new Humanoid(outfit);
+      const rig = createRig(outfit, { female: ['carla', 'marisol', 'lena', 'priya', 'amara', 'nova'].includes(post.npc), seed: post.npc.length });
       rig.root.position.set(post.x, 0.2, post.z);
       rig.body.rotation.y = post.facing;
       scene.add(rig.root);

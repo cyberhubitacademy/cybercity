@@ -1,3 +1,6 @@
+import { Score } from './Score';
+import type { MusicMood } from '../scripting/cinematic';
+
 // Procedural audio for Cyber City: synthwave radio stations, synthesized
 // sound effects, engine hum and ambience. No audio files are used.
 
@@ -168,6 +171,8 @@ export class AudioEngine {
   private ocean!: GainNode;
   private city!: GainNode;
   private crickets!: GainNode;
+  private score: Score | null = null;
+  private pendingMood: MusicMood = 'none';
 
   get ready(): boolean {
     return !!this.ctx;
@@ -231,8 +236,14 @@ export class AudioEngine {
 
     this.buildEngine();
     this.buildAmbience();
+    // Cinematic mission score: its own bus after the pause low-pass.
+    this.score = new Score(ctx, this.musicFilter, this.noiseBuf);
+    if (this.pendingMood !== 'none') this.score.set(this.pendingMood);
     this.applyVolumes();
-    this.timer = window.setInterval(() => this.schedule(), 25);
+    this.timer = window.setInterval(() => {
+      this.schedule();
+      this.score?.tick();
+    }, 25);
   }
 
   setVolumes(v: Volumes): void {
@@ -258,7 +269,10 @@ export class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.vol.master, t, 0.05);
-    this.musicBus.gain.setTargetAtTime(this.vol.music * this.modeGain() * (this.station < 0 ? 0 : 1) * 0.55, t, 0.15);
+    // While a mission cue plays, the radio/world music ducks out of the way.
+    const duck = this.scoreMood() !== 'none' ? 0.08 : 1;
+    this.musicBus.gain.setTargetAtTime(this.vol.music * this.modeGain() * (this.station < 0 ? 0 : 1) * 0.55 * duck, t, duck < 1 ? 0.6 : 1.2);
+    this.score?.setVolume(this.vol.music * 0.9);
     this.sfxBus.gain.setTargetAtTime(this.vol.sfx * 0.8, t, 0.05);
     this.ambBus.gain.setTargetAtTime(this.vol.ambient * 0.7, t, 0.2);
   }
@@ -300,6 +314,17 @@ export class AudioEngine {
     this.mode = mode;
     if (mode === 'menu' && !wasMenu) this.setStation(0);
     this.applyVolumes();
+  }
+
+  /** Crossfade the cinematic score to a mood; 'none' hands back to the radio. */
+  setScore(mood: MusicMood): void {
+    this.pendingMood = mood;
+    this.score?.set(mood);
+    this.applyVolumes();
+  }
+
+  scoreMood(): MusicMood {
+    return this.score ? this.score.current : this.pendingMood;
   }
 
   /** Muffle music (pause menus) with a low-pass on the music bus. */

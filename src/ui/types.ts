@@ -40,6 +40,10 @@ export interface MinimapState {
   camYaw: number;
   blips: Blip[];
   waypoint: { x: number; z: number } | null;
+  /** Optional GPS route (road-following points from the player to the destination). */
+  route?: { x: number; z: number }[];
+  /** Route color: defaults to purple for a waypoint, yellow for a mission destination. */
+  routeColor?: string;
 }
 
 export interface PromptView {
@@ -91,6 +95,8 @@ export interface MainMenuOptions {
   saveInfo?: string;
   /** Opens the save-file screen (link a file on disk, import/export). */
   onSaveFile?: () => void;
+  /** Opens the illustrated How to Play guide. */
+  onHowToPlay?: () => void;
 }
 
 export type QualityLevel = 'low' | 'medium' | 'high' | 'ultra';
@@ -184,7 +190,7 @@ export interface PauseView {
   initialTab?: PauseTab;
 }
 
-export type PauseTab = 'missions' | 'map' | 'inventory' | 'skills' | 'journal' | 'hub' | 'settings' | 'save';
+export type PauseTab = 'missions' | 'map' | 'inventory' | 'skills' | 'journal' | 'hub' | 'howto' | 'settings' | 'save';
 
 export interface ShopItem {
   id: string;

@@ -12,7 +12,12 @@ export type Topic =
   | 'incident'
   | 'social'
   | 'malware'
-  | 'wireless';
+  | 'wireless'
+  | 'web'
+  | 'cloud'
+  | 'ai'
+  | 'ics'
+  | 'supplychain';
 
 export const TOPIC_LABELS: Record<Topic, string> = {
   phishing: 'Phishing & Email',
@@ -25,6 +30,11 @@ export const TOPIC_LABELS: Record<Topic, string> = {
   social: 'Social Engineering',
   malware: 'Malware & Endpoints',
   wireless: 'Wireless & IoT',
+  web: 'Web App Security',
+  cloud: 'Cloud Security',
+  ai: 'AI & Deepfake Security',
+  ics: 'Industrial Control Systems',
+  supplychain: 'Supply-Chain Security',
 };
 
 export interface ConceptCard {

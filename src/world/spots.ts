@@ -19,6 +19,10 @@ export const TERMINALS: TerminalSpot[] = [
   { id: 'bank-terminal', name: 'Palmetto Bank Help Desk', x: 38, z: -93, facing: 0 },
   { id: 'uni-terminal', name: 'Okafor Forensics Lab', x: -114, z: -180, facing: 0 },
   { id: 'market-terminal', name: 'Byte Bazaar Crypto Rig', x: -28, z: -46, facing: -Math.PI / 2 },
+  { id: 'hospital-terminal', name: 'Neon Bay General IT Room', x: -196, z: 16, facing: Math.PI },
+  { id: 'grid-terminal', name: 'Power Station Control Room', x: -142, z: 194, facing: 0 },
+  { id: 'warroom-terminal', name: 'War Room Command Table', x: 118, z: -58, facing: 0 },
+  { id: 'docks-terminal', name: 'Harbor Cloud Edge Node', x: 52, z: 192, facing: 0 },
   { id: 'arcade-uni', name: 'Bayview CTF Arena (Cyber Arcade)', x: -200, z: -205, facing: 0 },
   { id: 'arcade-beach', name: 'Tiki Bytes Cyber Arcade', x: 198, z: 128, facing: Math.PI / 2 },
 ];
@@ -41,6 +45,10 @@ export const POSTS: CharacterPost[] = [
   { npc: 'marisol', x: 48, z: -96, facing: 0 },
   { npc: 'lena', x: -125, z: -180, facing: 0 },
   { npc: 'priya', x: -38, z: -38, facing: Math.PI / 4 },
+  { npc: 'amara', x: -212, z: 16, facing: Math.PI },
+  { npc: 'kai', x: -150, z: 196, facing: 0 },
+  { npc: 'jules', x: 64, z: 192, facing: 0 },
+  { npc: 'nova', x: 112, z: -54, facing: Math.PI / 2 },
 ];
 
 /** Parked vehicles available to the player. */

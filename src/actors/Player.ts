@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Humanoid, Outfit } from './Humanoid';
+import type { Outfit } from './Humanoid';
+import { createRig, type Rig } from './CharacterModel';
 import type { Input } from '../game/Input';
 import type { CollisionWorld } from '../world/Collision';
 import { SHORE_X, HARBOR_Z, WORLD_MIN } from '../world/layout';
@@ -14,7 +15,7 @@ export const RICO_OUTFIT: Outfit = {
 };
 
 export class Player {
-  readonly rig = new Humanoid(RICO_OUTFIT);
+  readonly rig: Rig = createRig(RICO_OUTFIT);
   readonly position = new THREE.Vector3();
   yaw = 0;
   private vy = 0;

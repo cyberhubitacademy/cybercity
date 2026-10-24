@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import type { CollisionWorld } from '../world/Collision';
 import { isWater } from '../world/layout';
+import { ASSETS, type CarModel } from '../assets/Assets';
 
 // Arcade vehicle model (GTA-feel rather than simulation): forward/lateral
 // velocity split with grip, handbrake drifts, speed-scaled steering, and
 // two-circle collision against the city boxes. Boats only move on water.
 
-export type VehicleKind = 'stinger' | 'cabrio' | 'shield' | 'sedan' | 'taxi' | 'van' | 'bike' | 'boat';
+export type VehicleKind = 'stinger' | 'cabrio' | 'shield' | 'sedan' | 'taxi' | 'van' | 'bike' | 'boat' | 'police' | 'pickup';
 
 export interface VehicleDef {
   kind: VehicleKind;
@@ -29,6 +30,8 @@ export const VEHICLE_DEFS: Record<VehicleKind, VehicleDef> = {
   taxi: { kind: 'taxi', name: 'Bay Cab', maxSpeed: 38, accel: 10, brake: 28, turn: 1.9, grip: 6, length: 4.8, width: 1.9, colors: ['#ffd23f'] },
   van: { kind: 'van', name: 'Pink Tide Van', maxSpeed: 36, accel: 9, brake: 24, turn: 1.6, grip: 5.5, length: 5.4, width: 2.1, colors: ['#f2eef5'] },
   bike: { kind: 'bike', name: 'Neon PCJ', maxSpeed: 50, accel: 18, brake: 30, turn: 2.6, grip: 8, length: 2.1, width: 0.7, colors: ['#ffd23f', '#ff2fa0', '#19e6ff'] },
+  police: { kind: 'police', name: 'Neon Bay PD Cruiser', maxSpeed: 46, accel: 14, brake: 32, turn: 2.0, grip: 7, length: 4.6, width: 1.95, colors: ['#f4f6fb'] },
+  pickup: { kind: 'pickup', name: 'Gulf Coast Pickup', maxSpeed: 38, accel: 11, brake: 28, turn: 1.8, grip: 6, length: 5.0, width: 2.05, colors: ['#c94f3d', '#2f5d8a', '#e8e1d4', '#3a3a44'] },
   boat: { kind: 'boat', name: 'Squalo Speedboat', maxSpeed: 40, accel: 11, brake: 12, turn: 1.4, grip: 2.2, length: 7, width: 2.4, colors: ['#ffffff'] },
 };
 
@@ -93,7 +96,78 @@ function wheel(radius: number, width: number): THREE.Group {
   return g;
 }
 
+/** Which CC0 model represents each vehicle kind (variants picked by color hash). */
+const MODEL_FOR: Partial<Record<VehicleKind, CarModel[]>> = {
+  stinger: ['sports'], cabrio: ['sports2'], shield: ['suv'], sedan: ['sedan', 'hatch'], taxi: ['taxi'],
+  van: ['truck'], police: ['police'], pickup: ['pickup'],
+};
+const KEEP_COLOR = /taxi|police|truck|pickup/;
+
+/** Build a vehicle from a loaded CC0 model: paint, glass, lights, pivoted wheels. */
+function modelVehicle(def: VehicleDef, color: string): { root: THREE.Group; wheels: THREE.Group[]; steerWheels: THREE.Group[] } | null {
+  const options = MODEL_FOR[def.kind];
+  if (!options) return null;
+  const model = options[[...color].reduce((n, c) => n + c.charCodeAt(0), 0) % options.length];
+  const src = ASSETS.cars.get(model);
+  if (!src) return null;
+  const obj = src.scene.clone(true);
+  obj.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const s = def.length / (size.z || 1);
+  const root = new THREE.Group();
+  const holder = new THREE.Group();
+  holder.scale.setScalar(s);
+  holder.position.set(-((box.min.x + box.max.x) / 2) * s, -box.min.y * s, -((box.min.z + box.max.z) / 2) * s);
+  holder.add(obj);
+  root.add(holder);
+  root.updateMatrixWorld(true);
+  const wheels: THREE.Group[] = [];
+  const steer: THREE.Group[] = [];
+  const paintMat = paint(color);
+  const wheelMeshes: THREE.Mesh[] = [];
+  obj.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    if (/wheel/i.test(mesh.name) || /wheel/i.test(mesh.parent?.name ?? '')) wheelMeshes.push(mesh);
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const next = mats.map((m) => {
+      const n = (m.name || '').toLowerCase();
+      if (n.includes('window')) return glassMat;
+      if (n.includes('headlight') || n === 'whitelights') return headMat;
+      if (n.includes('taillight') || n.includes('brake')) return tailMat;
+      if (n === 'bluelights') return new THREE.MeshStandardMaterial({ color: '#2244ff', emissive: '#3355ff', emissiveIntensity: 2 });
+      if (n === 'black') return tireMat;
+      if (n === 'grey' || n === 'gray') return rimMat;
+      if (n === 'atlas' || KEEP_COLOR.test(model)) {
+        const k = (m as THREE.MeshStandardMaterial).clone();
+        k.roughness = 0.35;
+        k.metalness = 0.3;
+        return k;
+      }
+      return paintMat; // body color
+    });
+    mesh.material = Array.isArray(mesh.material) ? next : next[0];
+  });
+  // Re-parent each wheel under a pivot at its own center so it spins on its axle.
+  for (const w of wheelMeshes) {
+    const wb = new THREE.Box3().setFromObject(w);
+    const c = wb.getCenter(new THREE.Vector3());
+    const pivot = new THREE.Group();
+    pivot.position.copy(root.worldToLocal(c.clone()));
+    root.add(pivot);
+    pivot.attach(w);
+    wheels.push(pivot);
+    if (/front/i.test(w.name) || /front/i.test(w.parent?.name ?? '')) steer.push(pivot);
+  }
+  return { root, wheels, steerWheels: steer };
+}
+
 export function buildVehicleMesh(def: VehicleDef, color: string): { root: THREE.Group; wheels: THREE.Group[]; steerWheels: THREE.Group[] } {
+  const fromModel = modelVehicle(def, color);
+  if (fromModel) return fromModel;
   const root = new THREE.Group();
   const wheels: THREE.Group[] = [];
   const steer: THREE.Group[] = [];
