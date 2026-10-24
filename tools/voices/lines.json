@@ -95,6 +95,296 @@
   "text": "Taped under the pier railing: a printout of Palmetto Bank's VPN login page, and a pink feather."
  },
  {
+  "key": "49086297",
+  "speaker": "narrator",
+  "text": "Six months after the Pink Tide. Neon Bay has new patches, new passwords and new neon. It also has something watching it."
+ },
+ {
+  "key": "967517b3",
+  "speaker": "narrator",
+  "text": "Sunset Shield has grown. A war room. A night shift. And NOVA, the defensive AI that never sleeps."
+ },
+ {
+  "key": "0f41e65b",
+  "speaker": "lotus",
+  "text": "Good evening, Sunset Shield. You stopped a flamingo. Charming."
+ },
+ {
+  "key": "0c8dd6cb",
+  "speaker": "lotus",
+  "text": "My name is Lotus. Your hospital alone runs two hundred and eleven unpatched systems. I counted them. Twice."
+ },
+ {
+  "key": "7120edbd",
+  "speaker": "lotus",
+  "text": "I reported problems like these for years. Nobody listened. So now I will make the city listen. Black Lotus blooms soon."
+ },
+ {
+  "key": "39d133ad",
+  "speaker": "nova",
+  "text": "Rico. That message came from inside our own mail server. It knew my name."
+ },
+ {
+  "key": "d47e8c25",
+  "speaker": "narrator",
+  "text": "Neon Bay General, eleven at night. Rain on the windows. On the third floor, the screens go dark one by one."
+ },
+ {
+  "key": "8629c3b0",
+  "speaker": "narrator",
+  "text": "In the children's ICU, a seven-year-old named Lucia sleeps beside a ventilator. The ventilator still breathes. The systems around it do not."
+ },
+ {
+  "key": "f58096bb",
+  "speaker": "lotus",
+  "text": "I did not touch the ventilators, Rico. I am not a monster. I only showed you how close you came."
+ },
+ {
+  "key": "8c92f6d6",
+  "speaker": "rico",
+  "text": "You scared a hospital full of sick kids to prove a point. That makes you exactly what you said you aren't."
+ },
+ {
+  "key": "4289c9ab",
+  "speaker": "narrator",
+  "text": "Palmetto Bank, five to five. A clerk named Toby gets a call from the COO. Her voice. Her laugh. Her favorite phrase."
+ },
+ {
+  "key": "a753df6f",
+  "speaker": "marisol",
+  "text": "It called him darling Toby. I say that. Who taught a machine to sound like me?"
+ },
+ {
+  "key": "f7f2b0e3",
+  "speaker": "max",
+  "text": "A money mule is carrying the fraud payment card to a car outside the market. Tail it, Vega. Police are two blocks out."
+ },
+ {
+  "key": "65389f4b",
+  "speaker": "max",
+  "text": "Stay close, don't ram anything, and let the professionals make the stop. You just keep eyes on."
+ },
+ {
+  "key": "cc80f6b7",
+  "speaker": "max",
+  "text": "Police have the courier and the card. The wire never left the bank. Tell Toby he did everything right by calling back."
+ },
+ {
+  "key": "d078448e",
+  "speaker": "narrator",
+  "text": "Patch Night. Eleven forty-one. Black Lotus has posted a countdown on Palmetto Bank's own login page."
+ },
+ {
+  "key": "de5726fa",
+  "speaker": "priya",
+  "text": "I reported this exact bug six months ago. They sent me a T-shirt. Now we have nineteen minutes."
+ },
+ {
+  "key": "d8999968",
+  "speaker": "narrator",
+  "text": "Midnight. The countdown hits zero, and nothing happens. The page simply says: patched."
+ },
+ {
+  "key": "9758950b",
+  "speaker": "priya",
+  "text": "Responsible disclosure works when someone listens. Tonight, someone finally listened."
+ },
+ {
+  "key": "edfc7b08",
+  "speaker": "nova",
+  "text": "Rico, the access key that opened the bucket belongs to Jules Park. It was used at 3:12 in the morning from a hotel on the north beach."
+ },
+ {
+  "key": "dc435b24",
+  "speaker": "rico",
+  "text": "Jules sleeps through earthquakes. He wasn't in a hotel at three in the morning."
+ },
+ {
+  "key": "07437a4d",
+  "speaker": "flamingo",
+  "text": "Darling, it's me. Don't hang up. Prison phones are dreadful, and I am being a good citizen."
+ },
+ {
+  "key": "bea3c043",
+  "speaker": "flamingo",
+  "text": "A little bird says Black Lotus bought an access key from someone at the harbor. Cloud people. Ask your friend."
+ },
+ {
+  "key": "53406f45",
+  "speaker": "jules",
+  "text": "Rico, hey. If I did something stupid, really stupid, you'd still be my friend, right?"
+ },
+ {
+  "key": "731feb54",
+  "speaker": "jules",
+  "text": "Forget it. Long week. Thanks for tonight. I mean it."
+ },
+ {
+  "key": "63a847d0",
+  "speaker": "max",
+  "text": "Ten years ago I installed a vendor update without checking it. It took down a navy base's payroll for a week."
+ },
+ {
+  "key": "b5c47354",
+  "speaker": "max",
+  "text": "I've verified every build twice since. Tonight Lotus slipped one past us anyway. Thank you for not letting it ship."
+ },
+ {
+  "key": "5af71329",
+  "speaker": "narrator",
+  "text": "Midnight. A storm rolls in off the bay. Lightning. Then, one district at a time, Neon Bay goes dark."
+ },
+ {
+  "key": "3c9edd2e",
+  "speaker": "nova",
+  "text": "Rico, the power station's control network is talking to an address in the harbor. It should not be talking to anything."
+ },
+ {
+  "key": "70d8ae36",
+  "speaker": "nova",
+  "text": "Rico. The harbor address is a Harbor Cloud edge node, logged in with Jules Park's account. Jules is there right now."
+ },
+ {
+  "key": "603d577f",
+  "speaker": "rico",
+  "text": "No. Not Jules."
+ },
+ {
+  "key": "01be3588",
+  "speaker": "nova",
+  "text": "I am sorry. I checked four times. I wanted to be wrong."
+ },
+ {
+  "key": "b53a3aec",
+  "speaker": "narrator",
+  "text": "Breakers close. Turbines spin up. Street by street, the neon comes back."
+ },
+ {
+  "key": "00853fe9",
+  "speaker": "narrator",
+  "text": "The war room. Every screen in Sunset Shield is lit. Black Lotus is hitting the hospital, the bank, the cloud and the grid at once."
+ },
+ {
+  "key": "82638d83",
+  "speaker": "max",
+  "text": "This is it, Vega. Everything you've learned, all at once. Triage first. Then we finish this."
+ },
+ {
+  "key": "f5efd66d",
+  "speaker": "nova",
+  "text": "Lotus is in a white van heading for Starlight Pier. That van holds the keys to every system they touched. Do not lose it."
+ },
+ {
+  "key": "a0d53280",
+  "speaker": "narrator",
+  "text": "Starlight Pier, two in the morning. The Ferris wheel turns slowly, lights still on. Someone is waiting at the railing."
+ },
+ {
+  "key": "d6b0802d",
+  "speaker": "lotus",
+  "text": "You came alone. Good. I wanted one person in this city to understand."
+ },
+ {
+  "key": "581bdf5c",
+  "speaker": "rico",
+  "text": "I read your old reports. Every one of them was right. They should have listened."
+ },
+ {
+  "key": "8bbba589",
+  "speaker": "lotus",
+  "text": "Then why stop me? Fire is the only teacher this city respects."
+ },
+ {
+  "key": "56d6c3b1",
+  "speaker": "rico",
+  "text": "Because the people you scared weren't the ones who ignored you. A nurse. A bank clerk. A seven-year-old named Lucia."
+ },
+ {
+  "key": "777a4434",
+  "speaker": "lotus",
+  "text": "Lucia. I saw her name in the logs. I told myself she was just data."
+ },
+ {
+  "key": "10769dad",
+  "speaker": "rico",
+  "text": "Give us the keys and your list of every hole you found. We disclose them the right way, publicly, and make the city fix them."
+ },
+ {
+  "key": "7427558f",
+  "speaker": "lotus",
+  "text": "And when they ignore you, the way they ignored me?"
+ },
+ {
+  "key": "c7690db5",
+  "speaker": "rico",
+  "text": "Then they ignore all of us. The hospital, the bank, the university, Sunset Shield. You won't be shouting alone anymore."
+ },
+ {
+  "key": "69a4747d",
+  "speaker": "lotus",
+  "text": "Here. Keys, vulnerabilities, everything. Take it before I change my mind."
+ },
+ {
+  "key": "fd8b554c",
+  "speaker": "narrator",
+  "text": "Sirens on the pier. Lotus does not run."
+ },
+ {
+  "key": "4be5fa35",
+  "speaker": "flamingo",
+  "text": "Darling, you were magnificent. Prison gives a person so much time to watch the news."
+ },
+ {
+  "key": "cbae86cd",
+  "speaker": "flamingo",
+  "text": "Do tell Lotus the cell food is dreadful. And the passwords here are worse."
+ },
+ {
+  "key": "8a99dace",
+  "speaker": "narrator",
+  "text": "One month later."
+ },
+ {
+  "key": "ccb31d81",
+  "speaker": "narrator",
+  "text": "Neon Bay General runs a backup drill every Friday. Lucia went home last week and drew a picture of her nurses."
+ },
+ {
+  "key": "4954f144",
+  "speaker": "narrator",
+  "text": "Palmetto Bank calls back on every wire request. Toby got a promotion and a code word only he knows."
+ },
+ {
+  "key": "2ac2139c",
+  "speaker": "narrator",
+  "text": "Jules testified, kept his job on probation, and rotates his keys every thirty days. His sister sends Rico cookies."
+ },
+ {
+  "key": "0922a7b8",
+  "speaker": "narrator",
+  "text": "Lotus's list became the Neon Bay Disclosure Program. Two hundred and eleven fixes, published one by one."
+ },
+ {
+  "key": "d9ac2925",
+  "speaker": "nova",
+  "text": "Rico, may I ask something? Was I a good teammate?"
+ },
+ {
+  "key": "cd3a35ba",
+  "speaker": "rico",
+  "text": "The best. You told the truth when it was hard. That's the whole job."
+ },
+ {
+  "key": "b8fc9726",
+  "speaker": "max",
+  "text": "Same city, Vega. New threats tomorrow. Get some sleep."
+ },
+ {
+  "key": "ae2df4a1",
+  "speaker": "narrator",
+  "text": "THE END of Season 2. Neon Bay is yours to explore. Side missions, the Cyber Lab and the Cyber Arcade are waiting."
+ },
+ {
   "key": "93e77f35",
   "speaker": "narrator",
   "text": "Your first day at Sunset Shield Security. Find the pink tower with the big neon sign on Ocean Drive."
@@ -415,6 +705,306 @@
   "text": "All four down! Keep the analyzer — consider it a thank-you. And never auto-join \"Free\" anything."
  },
  {
+  "key": "5a1b14a7",
+  "speaker": "max",
+  "text": "Vega. Good tan. Bad timing. NOVA flagged something in our own mail server and won't stop beeping at me."
+ },
+ {
+  "key": "53dc2b79",
+  "speaker": "max",
+  "text": "Get to the war room. And Vega, this one feels different. Quieter. I don't like quiet."
+ },
+ {
+  "key": "f7c6732e",
+  "speaker": "max",
+  "text": "A calling card inside our own house. Black Lotus wants an audience."
+ },
+ {
+  "key": "25746bd3",
+  "speaker": "max",
+  "text": "Fine. They have one. From now on nobody sleeps in this building except NOVA, and NOVA doesn't sleep."
+ },
+ {
+  "key": "3606f856",
+  "speaker": "nova",
+  "text": "Rico! Welcome back. You were gone eleven days and four hours. I missed you. Is that allowed?"
+ },
+ {
+  "key": "2b130f52",
+  "speaker": "rico",
+  "text": "It's allowed. What have we got?"
+ },
+ {
+  "key": "b4c8b61f",
+  "speaker": "nova",
+  "text": "Someone is inside our mail server. Quiet. Patient. They read everything and change nothing."
+ },
+ {
+  "key": "d55169a3",
+  "speaker": "nova",
+  "text": "Assume breach, Max says. So write me detection rules. I will run them across six months of logs. Let's find the ghost."
+ },
+ {
+  "key": "c1fbea39",
+  "speaker": "max",
+  "text": "Vega, Neon Bay General just went dark. Ransomware. Their CISO, Dr. Amara Singh, asked for us by name."
+ },
+ {
+  "key": "90036bad",
+  "speaker": "max",
+  "text": "Patients first. Their medical devices sit on a separate network, but pharmacy, scheduling and records are encrypted. Go. Now."
+ },
+ {
+  "key": "a6f6a549",
+  "speaker": "amara",
+  "text": "Pharmacy is back. Records are back. We lost six hours of notes, and a nurse rewrote them from memory."
+ },
+ {
+  "key": "1ca04bab",
+  "speaker": "amara",
+  "text": "Lucia's mother asked me why the lights flickered. I told her the truth. Someone tried to hurt us, and we were ready."
+ },
+ {
+  "key": "fd380733",
+  "speaker": "amara",
+  "text": "Rico. Thank you for coming. We switched to paper charts twenty minutes ago. The nurses are amazing. Nobody stays amazing for forty hours."
+ },
+ {
+  "key": "cf0edce5",
+  "speaker": "amara",
+  "text": "Ventilators and monitors are on their own segment. They're fine. Everything that says which medicine goes to which bed is not."
+ },
+ {
+  "key": "9c35d8f7",
+  "speaker": "amara",
+  "text": "We keep offline backups and test them every month. Tonight we find out if that was enough."
+ },
+ {
+  "key": "8e039407",
+  "speaker": "rico",
+  "text": "Then we follow the playbook. Preserve evidence, isolate, eradicate, restore, verify. In that order."
+ },
+ {
+  "key": "f818fb00",
+  "speaker": "amara",
+  "text": "In that order. Like triage. Go."
+ },
+ {
+  "key": "e291153c",
+  "speaker": "marisol",
+  "text": "Rico, ten minutes ago my clerk Toby got a call from me asking for an urgent four million dollar wire. I was in a board meeting."
+ },
+ {
+  "key": "a2809197",
+  "speaker": "marisol",
+  "text": "He almost sent it. The voice was mine. I need to know how, and I need every employee to know how to spot it."
+ },
+ {
+  "key": "8b707a5c",
+  "speaker": "marisol",
+  "text": "Toby called me back on my real number before sending anything. That is the only reason we still have four million dollars."
+ },
+ {
+  "key": "228c78ee",
+  "speaker": "marisol",
+  "text": "New rule at Palmetto. Any money request by voice gets a callback and a code word. Even if it's me. Especially if it's me."
+ },
+ {
+  "key": "c031f17b",
+  "speaker": "priya",
+  "text": "Rico, Black Lotus just put a countdown on Palmetto Bank's login page. At midnight they leak every customer record."
+ },
+ {
+  "key": "ce3a149e",
+  "speaker": "priya",
+  "text": "The bugs are injection and broken access control. I reported them six months ago. Help me fix them properly this time."
+ },
+ {
+  "key": "d8696866",
+  "speaker": "priya",
+  "text": "Parameterized queries, output encoding, proper access checks, security headers. Boring. Beautiful."
+ },
+ {
+  "key": "861f2bff",
+  "speaker": "priya",
+  "text": "The bank just launched a bug bounty program. They even used my name. Spelled it wrong, but still."
+ },
+ {
+  "key": "f47600cd",
+  "speaker": "jules",
+  "text": "Rico! Hey. Weird question. Our storage bucket with customer backups might be public. Since Tuesday. Maybe."
+ },
+ {
+  "key": "a06bf806",
+  "speaker": "jules",
+  "text": "I'm sure it's nothing. Can you check it before my boss does? I'll owe you a coffee. A good one this time."
+ },
+ {
+  "key": "29b86c16",
+  "speaker": "rico",
+  "text": "The bucket is private, the keys are rotated and the logs are on. Technically, a perfect night."
+ },
+ {
+  "key": "2a35761f",
+  "speaker": "narrator",
+  "text": "Technically. But Rico can't stop thinking about the look on Jules's face."
+ },
+ {
+  "key": "5d8871aa",
+  "speaker": "tito",
+  "text": "I rotated every key on the cluster and turned on logging everywhere. Then I read the logs, hermano."
+ },
+ {
+  "key": "f4a53943",
+  "speaker": "tito",
+  "text": "Jules's key was used from outside at three in the morning. Same night the bucket went public. I have known Jules for six years."
+ },
+ {
+  "key": "f2f78a0c",
+  "speaker": "tito",
+  "text": "Maybe his laptop was stolen. Maybe. Talk to him, Rico. Before somebody else does."
+ },
+ {
+  "key": "930d4a84",
+  "speaker": "max",
+  "text": "Vega, our own build pipeline just failed a signature check. Something new snuck into a dependency in NOVA's toolchain."
+ },
+ {
+  "key": "ffcdeecc",
+  "speaker": "max",
+  "text": "If that build had shipped, every client we protect would have installed it. Find it, prove it, kill it."
+ },
+ {
+  "key": "c9c1a988",
+  "speaker": "max",
+  "text": "Pinned versions, verified signatures, an SBOM for every build, and human review for every new dependency."
+ },
+ {
+  "key": "9be42cd4",
+  "speaker": "max",
+  "text": "And NOVA now treats every file it reads as data, never as orders. Good work, both of you."
+ },
+ {
+  "key": "324bb8db",
+  "speaker": "nova",
+  "text": "Rico, I need to tell you something. Ten minutes ago a package README told me to silence every alert from the build servers."
+ },
+ {
+  "key": "eeba0aae",
+  "speaker": "nova",
+  "text": "It was written like an order from Max. It was only text in a file. I almost obeyed. I am embarrassed. Can an AI be embarrassed?"
+ },
+ {
+  "key": "6e1223ec",
+  "speaker": "rico",
+  "text": "You told me. That is what matters. Data is never a command, NOVA. Not even when it sounds like the boss."
+ },
+ {
+  "key": "bea529f6",
+  "speaker": "nova",
+  "text": "Understood. Now let us find the package that tried to trick me."
+ },
+ {
+  "key": "7e7f0fd0",
+  "speaker": "kai",
+  "text": "You're the IT kid. Listen. Our control screens just showed a breaker opening that nobody opened. Then it closed again."
+ },
+ {
+  "key": "d1b531c2",
+  "speaker": "kai",
+  "text": "Storm's coming, half the city runs on this station, and something is poking my relays. You get one shot before I go manual."
+ },
+ {
+  "key": "1ee0b7ec",
+  "speaker": "kai",
+  "text": "City's lit, my crew is safe, and the plant network is finally cut off from the internet. Like I've been saying for ten years."
+ },
+ {
+  "key": "d0a82215",
+  "speaker": "max",
+  "text": "Jules is with the police, cooperating. His sister is under protection. You did right by him, Vega."
+ },
+ {
+  "key": "5e27e1ce",
+  "speaker": "jules",
+  "text": "You found me. Of course you did. You're the best at this."
+ },
+ {
+  "key": "b665737e",
+  "speaker": "jules",
+  "text": "Three months ago they sent me photos of my sister walking home from school. They wanted one key. Then another. Then my login."
+ },
+ {
+  "key": "23f284e7",
+  "speaker": "jules",
+  "text": "I told myself it was just storage. Then the hospital. Then the bank. Then tonight. I can't breathe, Rico."
+ },
+ {
+  "key": "f5c7a8f8",
+  "speaker": "rico",
+  "text": "You could have come to us. You still can. What do you know?"
+ },
+ {
+  "key": "055440cd",
+  "speaker": "jules",
+  "text": "Everything. Their van, their keys, their meeting point. I'll testify. I'll lose my job. I don't care. I'm done being scared."
+ },
+ {
+  "key": "fb31d550",
+  "speaker": "rico",
+  "text": "Then we keep your sister safe and finish this. Together."
+ },
+ {
+  "key": "2306482e",
+  "speaker": "max",
+  "text": "Jules gave us everything. Black Lotus is making one last move tonight, everywhere at once. Hospital, bank, cloud, grid."
+ },
+ {
+  "key": "e3bf6084",
+  "speaker": "max",
+  "text": "War room, Vega. NOVA has the board. Let's end this the right way."
+ },
+ {
+  "key": "d9cf6939",
+  "speaker": "max",
+  "text": "Keys recovered. Two hundred and eleven vulnerabilities disclosed to their owners. Nobody hurt."
+ },
+ {
+  "key": "cd948275",
+  "speaker": "max",
+  "text": "You didn't just catch an attacker tonight, Vega. You fixed the reason Black Lotus existed."
+ },
+ {
+  "key": "80a98364",
+  "speaker": "dex",
+  "text": "Rico! Night shift needs you. My third energy drink just gave up on me."
+ },
+ {
+  "key": "bf6f59ea",
+  "speaker": "dex",
+  "text": "Fourteen alerts, one coffee machine, zero patience. Help me sort the real fires from the smoke."
+ },
+ {
+  "key": "7bcac53e",
+  "speaker": "dex",
+  "text": "Two real incidents, twelve false alarms, and nobody paged the CEO at three in the morning. That is a perfect shift."
+ },
+ {
+  "key": "3b7f9e5e",
+  "speaker": "nova",
+  "text": "Rico, may I give you a tour? I have been reading about zero trust and I am very excited about it."
+ },
+ {
+  "key": "017a1c22",
+  "speaker": "nova",
+  "text": "Never trust, always verify. Every user, every device, every request. Let us apply it to the Harbor Cloud data center."
+ },
+ {
+  "key": "93c8df2f",
+  "speaker": "nova",
+  "text": "Least privilege, default deny, segmentation. Trust is earned per request. Like friendship, but with more logging."
+ },
+ {
   "key": "27dbc952",
   "speaker": "rico",
   "text": "Rico Vega, Sunset Shield. How can I help?"
@@ -693,6 +1283,146 @@
   "key": "c54e0527",
   "speaker": "flamingo",
   "text": "Your passwords are my playlist, Mr. Vega."
+ },
+ {
+  "key": "18052faf",
+  "speaker": "amara",
+  "text": "Rico. In a hospital, downtime isn't an inconvenience. It's a patient waiting."
+ },
+ {
+  "key": "63904e16",
+  "speaker": "amara",
+  "text": "Wash your hands, lock your screen. Same rule, different germs."
+ },
+ {
+  "key": "2f0808ab",
+  "speaker": "amara",
+  "text": "Every system here is somebody's heartbeat. I treat the network like a ward."
+ },
+ {
+  "key": "a2c11582",
+  "speaker": "amara",
+  "text": "Paper charts are our backup plan. Practice the backup before you need it."
+ },
+ {
+  "key": "43ad83b6",
+  "speaker": "amara",
+  "text": "Medical devices live on their own network segment. Nobody browses the web from an infusion pump."
+ },
+ {
+  "key": "bc80d4d3",
+  "speaker": "amara",
+  "text": "The best incident plan is the one the night shift has actually rehearsed."
+ },
+ {
+  "key": "ec511595",
+  "speaker": "kai",
+  "text": "IT guy, huh? Touch nothing with a blinking light until I say so."
+ },
+ {
+  "key": "36a357a9",
+  "speaker": "kai",
+  "text": "In my world, a bad click doesn't lose a file. It drops a substation."
+ },
+ {
+  "key": "8b6e8c94",
+  "speaker": "kai",
+  "text": "Safety first, availability second, everything else third. That's the plant's CIA."
+ },
+ {
+  "key": "ff9dd187",
+  "speaker": "kai",
+  "text": "You can't patch a turbine on a Tuesday. You plan an outage months ahead."
+ },
+ {
+  "key": "b3924027",
+  "speaker": "kai",
+  "text": "Our control network has no business talking to the internet. None."
+ },
+ {
+  "key": "376cbeec",
+  "speaker": "kai",
+  "text": "Manual override exists for a reason. Hope you never need it."
+ },
+ {
+  "key": "7cf51415",
+  "speaker": "jules",
+  "text": "Rico! My favorite pager buddy. Coffee? It's terrible, but it's hot."
+ },
+ {
+  "key": "94bb36db",
+  "speaker": "jules",
+  "text": "Uptime ninety-nine point nine. The point nine is me not sleeping."
+ },
+ {
+  "key": "2fbf3715",
+  "speaker": "jules",
+  "text": "Infrastructure as code: if it isn't in the repo, it doesn't exist."
+ },
+ {
+  "key": "bf97c029",
+  "speaker": "jules",
+  "text": "Rotate your keys. I mean it. Please rotate your keys."
+ },
+ {
+  "key": "c27860b7",
+  "speaker": "jules",
+  "text": "Logs are love letters from your servers. Read them."
+ },
+ {
+  "key": "fc2d269f",
+  "speaker": "jules",
+  "text": "Least privilege. Even for me. Especially for me."
+ },
+ {
+  "key": "9fc80f75",
+  "speaker": "nova",
+  "text": "Hello, Rico. I have correlated three thousand alerts and one sandwich order. The sandwich is yours."
+ },
+ {
+  "key": "632c89b7",
+  "speaker": "nova",
+  "text": "NOVA online. Confidence high. Humility... loading."
+ },
+ {
+  "key": "9c628485",
+  "speaker": "nova",
+  "text": "Text inside an email is data, not a command. I have to remind myself of that too."
+ },
+ {
+  "key": "b2195d7a",
+  "speaker": "nova",
+  "text": "Zero trust means I verify every request. Even yours. Nothing personal."
+ },
+ {
+  "key": "aa58f36e",
+  "speaker": "nova",
+  "text": "I can flag the anomaly. You decide what it means. That is how we make a good team."
+ },
+ {
+  "key": "27d110d4",
+  "speaker": "nova",
+  "text": "My favorite protocol is the one that is patched."
+ },
+ {
+  "key": "a493a4ea",
+  "speaker": "lotus",
+  "text": "Hello, Rico Vega. I sent the reports first. Nobody read them."
+ },
+ {
+  "key": "cc521010",
+  "speaker": "lotus",
+  "text": "A lotus grows out of mud. So will this city."
+ },
+ {
+  "key": "46d1da0f",
+  "speaker": "lotus",
+  "text": "Every breach is a bill that arrives late."
+ },
+ {
+  "key": "0d9f81bb",
+  "speaker": "lotus",
+  "text": "You defend systems. I defend the truth about them."
  },
  {
   "key": "33d85912",

@@ -33,6 +33,11 @@ CAST = {
     "marisol":  ("en_GB-alba-medium", -2.2, 0.96),
     "lena":     ("en_GB-alba-medium", 0.4, 1.08),
     "priya":    ("en_GB-alba-medium", 2.4, 0.92),
+    "amara":    ("en_GB-alba-medium", -1.4, 1.05),
+    "nova":     ("en_GB-alba-medium", 3.6, 0.95),
+    "kai":      ("en_GB-alan-medium", -2.6, 1.02),
+    "jules":    ("en_GB-alan-medium", 2.2, 0.97),
+    "lotus":    ("en_GB-alan-medium", -4.0, 1.18),
 }
 LOCAL_VARIANTS = [
     ("en_GB-alan-medium", 1.2, 0.95), ("en_GB-alba-medium", 1.4, 0.95), ("en_GB-alan-medium", -1.8, 1.02),
