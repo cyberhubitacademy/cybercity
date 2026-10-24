@@ -9,23 +9,23 @@ import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import type { Quality } from '../world/Environment';
 
 // Rendering pipeline: scene -> ambient occlusion -> bloom -> tone map -> color grade.
-// The grade pushes a warm-highlight / teal-shadow split tone with extra
-// saturation and a soft vignette, for the sun-baked "Leonida" look.
+// The grade is natural and restrained (see docs/VISUAL_TARGET.md): warm sunlit
+// highlights, cool shade, filmic contrast, colour saved for accents, soft vignette.
 
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     texel: { value: new THREE.Vector2(1 / 1280, 1 / 720) },
-    saturation: { value: 1.12 },
-    vibrance: { value: 0.35 },
-    contrast: { value: 1.1 },
-    warmth: { value: 0.07 },
+    saturation: { value: 1.0 },
+    vibrance: { value: 0.12 },
+    contrast: { value: 1.06 },
+    warmth: { value: 0.05 },
     sharpen: { value: 0.35 },
-    vignette: { value: 0.22 },
+    vignette: { value: 0.18 },
     night: { value: 0 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-  // "Leonida" look: crisp detail, filmic S-curve, vibrance (boosts muted colors more than
+  // Crisp detail, filmic S-curve, light vibrance (boosts muted colors more than
   // already-saturated ones), teal shadows, warm peach highlights, light vignette.
   fragmentShader: `
     uniform sampler2D tDiffuse; uniform vec2 texel;
@@ -130,7 +130,7 @@ export class Renderer {
 
   /**
    * Frame-rate governor: keeps play smooth on any machine. Below ~38 fps it
-   * lowers internal resolution, then sheds ambient occlusion, shadows and bloom;
+   * lowers internal resolution, then sheds ambient occlusion, bloom and (last) shadows;
    * with sustained headroom it restores them one step at a time.
    */
   govern(dtSeconds: number): void {
@@ -161,7 +161,7 @@ export class Renderer {
     }
   }
 
-  /** Effects the governor has shed (shadows at level 2+, bloom at level 3). */
+  /** Effects the governor has shed (AO at 1+, bloom at 2+, shadows at 3). */
   get shed(): number {
     return this.shedLevel;
   }
@@ -186,7 +186,7 @@ export class Renderer {
 
   setLook(exposure: number, night: number, bloomEnabled: boolean): void {
     this.renderer.toneMappingExposure = exposure;
-    this.bloom.enabled = bloomEnabled && this.shedLevel < 3;
+    this.bloom.enabled = bloomEnabled && this.shedLevel < 2; // bloom goes before shadows: shadows sell realism
     this.bloom.strength = 0.35 + night * 0.75;
     this.bloom.threshold = 0.85 - night * 0.2;
     this.grade.uniforms.night.value = night;

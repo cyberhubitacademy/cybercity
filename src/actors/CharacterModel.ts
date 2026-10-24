@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ASSETS, type PersonModel } from '../assets/Assets';
 import { Humanoid, type Outfit } from './Humanoid';
 import { hawaiianShirt } from '../world/textures';
@@ -52,6 +53,123 @@ const _fv = new THREE.Vector3();
 const _fm = new THREE.Matrix4();
 
 const HEIGHT = 1.78;
+
+// ---------------------------------------------------------------- merged NPC mesh
+// A Quaternius person is ~7 skinned meshes (one per material). Crowds of them were
+// the biggest draw-call cost in the game, so NPCs are merged into ONE skinned mesh:
+// a per-vertex `part` index picks the colour and roughness from a small palette
+// uniform, so every pedestrian still gets their own outfit with a single draw call
+// and one shared shader program.
+
+const MAX_PARTS = 12;
+
+interface MergedModel {
+  geometry: THREE.BufferGeometry;
+  parts: string[]; // material name per part index (lower case)
+  baseColors: THREE.Color[]; // original material colours (eyes etc.)
+}
+
+const mergedCache = new Map<PersonModel, MergedModel | null>();
+
+function mergedFor(model: PersonModel, scene: THREE.Object3D): MergedModel | null {
+  if (mergedCache.has(model)) return mergedCache.get(model) ?? null;
+  let result: MergedModel | null = null;
+  try {
+    const meshes: THREE.SkinnedMesh[] = [];
+    scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) meshes.push(o as THREE.SkinnedMesh); });
+    const skel = meshes[0]?.skeleton;
+    if (meshes.length > 1 && meshes.length <= MAX_PARTS && meshes.every((m) => m.skeleton === skel && !Array.isArray(m.material))) {
+      const geos: THREE.BufferGeometry[] = [];
+      const parts: string[] = [];
+      const baseColors: THREE.Color[] = [];
+      meshes.forEach((m, i) => {
+        const g = m.geometry.clone();
+        for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) g.deleteAttribute(k);
+        g.morphAttributes = {};
+        g.setAttribute('part', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(i), 1));
+        geos.push(g);
+        const mat = m.material as THREE.MeshStandardMaterial;
+        parts.push((mat.name || '').toLowerCase());
+        baseColors.push(mat.color ? mat.color.clone() : new THREE.Color('#888888'));
+      });
+      const geometry = mergeGeometries(geos, false);
+      if (geometry) result = { geometry, parts, baseColors };
+    }
+  } catch (err) {
+    console.warn('[rig] merge failed, using separate meshes', err);
+  }
+  mergedCache.set(model, result);
+  return result;
+}
+
+/** One material per NPC (own palette) sharing a single compiled program. */
+function paletteMaterial(colors: THREE.Color[], rough: number[], pattern: { part: number; accent: THREE.Color }): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 });
+  const palette = { value: Array.from({ length: MAX_PARTS }, (_, i) => colors[i] ?? new THREE.Color('#888888')) };
+  const roughU = { value: Array.from({ length: MAX_PARTS }, (_, i) => rough[i] ?? 0.8) };
+  const patPart = { value: pattern.part };
+  const accent = { value: pattern.accent };
+  mat.userData.palette = palette;
+  mat.userData.patPart = patPart;
+  mat.userData.accent = accent;
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.palette = palette;
+    sh.uniforms.pRough = roughU;
+    sh.uniforms.patPart = patPart;
+    sh.uniforms.accent = accent;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float part;\nvarying float vPart;\nvarying vec3 vRest;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = part;\nvRest = position;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>\nuniform vec3 palette[${MAX_PARTS}];\nuniform float pRough[${MAX_PARTS}];\nuniform float patPart;\nuniform vec3 accent;\nvarying float vPart;\nvarying vec3 vRest;`)
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `int pi = int(vPart + 0.5);
+        vec3 pc = palette[pi];
+        if (abs(vPart - patPart) < 0.5) {
+          // simple tropical print: scattered blossoms on the base colour
+          vec3 q = vRest * 9.0;
+          float f = sin(q.x * 1.7 + sin(q.y * 1.3)) * sin(q.y * 1.9 + sin(q.z * 1.1)) * sin(q.z * 1.5 + q.x * 0.7);
+          pc = mix(pc, accent, smoothstep(0.35, 0.55, f));
+        }
+        vec4 diffuseColor = vec4( pc, opacity );`)
+      .replace('float roughnessFactor = roughness;', 'float roughnessFactor = pRough[int(vPart + 0.5)];');
+  };
+  mat.customProgramCacheKey = () => 'cc-npc-palette';
+  return mat;
+}
+
+const roughFor = (key: string) => (key === 'skin' ? 0.55 : key.includes('hair') ? 0.7 : 0.82);
+
+/**
+ * Turn a freshly cloned person (`obj`, from `sceneSrc`) into one skinned mesh with a
+ * palette material. `colors` maps lower-case material names to outfit colours; parts
+ * not listed keep the model's own colour. `printAccent` adds the shirt print.
+ * Returns null (obj untouched) when the model can't be merged.
+ */
+export function mergeIntoPalette(
+  model: PersonModel, sceneSrc: THREE.Object3D, obj: THREE.Object3D,
+  colors: Record<string, string>, printAccent: string | null = null,
+): { mat: THREE.MeshStandardMaterial; shirtParts: number[] } | null {
+  const merged = mergedFor(model, sceneSrc);
+  if (!merged) return null;
+  const meshes: THREE.SkinnedMesh[] = [];
+  obj.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) meshes.push(o as THREE.SkinnedMesh); });
+  if (!meshes.length) return null;
+  const keep = meshes[0];
+  for (const m of meshes.slice(1)) m.parent?.remove(m);
+  const cols = merged.parts.map((k, i) => (colors[k] ? new THREE.Color(colors[k]) : merged.baseColors[i].clone()));
+  const shirtParts = merged.parts.map((k, i) => (k === 'shirt' || k === 'dress' ? i : -1)).filter((i) => i >= 0);
+  const print = printAccent !== null && shirtParts.length > 0;
+  const mat = paletteMaterial(cols, merged.parts.map(roughFor), { part: print ? shirtParts[0] : -1, accent: new THREE.Color(printAccent ?? '#ff3d9a') });
+  if (!merged.geometry.boundingSphere) {
+    merged.geometry.computeBoundingSphere();
+    merged.geometry.boundingSphere!.radius *= 1.6; // room for animated limbs
+  }
+  keep.geometry = merged.geometry;
+  keep.material = mat;
+  keep.castShadow = true;
+  keep.frustumCulled = true; // one generous sphere per NPC: off-screen crowds cost nothing
+  return { mat, shirtParts };
+}
 type Clip = 'idle' | 'walk' | 'run' | 'jump' | 'sit' | 'wave';
 
 const CLIP_PATTERNS: Record<Clip, RegExp> = {
@@ -70,12 +188,13 @@ export class CharacterModel implements Rig {
   private actions = new Map<Clip, THREE.AnimationAction>();
   private current: Clip | null = null;
   private shirtMats: THREE.MeshStandardMaterial[] = [];
+  private palette: { mat: THREE.MeshStandardMaterial; shirtParts: number[] } | null = null;
   private waving = 0;
   private pose = new PoseLayer();
   private bones: PoseBindings = {};
   private feet: FootFollow[] = [];
 
-  constructor(model: PersonModel, outfit: Outfit) {
+  constructor(model: PersonModel, outfit: Outfit, merge = false) {
     const src = ASSETS.people.get(model);
     if (!src) throw new Error(`model ${model} not loaded`);
     const obj = cloneSkinned(src.scene);
@@ -95,7 +214,9 @@ export class CharacterModel implements Rig {
       pants: outfit.pants, skin: outfit.skin, hair: outfit.hair, hairbase: outfit.hair, eyebrows: outfit.hair,
       shoes: outfit.shoes ?? '#f4f4f4', socks: '#ffffff',
     };
-    obj.traverse((o) => {
+    const merged = merge ? mergeIntoPalette(model, src.scene, obj, colors, outfit.pattern === 'hawaiian' ? outfit.accent ?? '#ff3d9a' : null) : null;
+    if (merged) this.palette = merged;
+    else obj.traverse((o) => {
       const mesh = o as THREE.SkinnedMesh;
       if (!mesh.isMesh) return;
       mesh.castShadow = true;
@@ -108,14 +229,14 @@ export class CharacterModel implements Rig {
           mat.color.set(colors[key]);
           mat.map = null;
         }
-        mat.roughness = key === 'skin' ? 0.55 : key.includes('hair') ? 0.7 : 0.82;
+        mat.roughness = roughFor(key);
         mat.metalness = 0;
         if (key === 'shirt' || key === 'dress') this.shirtMats.push(mat);
         return mat;
       });
       mesh.material = Array.isArray(mesh.material) ? next : next[0];
     });
-    if (outfit.pattern === 'hawaiian') this.setShirt(outfit.shirt, outfit.accent ?? '#ff3d9a');
+    if (outfit.pattern === 'hawaiian' && !merged) this.setShirt(outfit.shirt, outfit.accent ?? '#ff3d9a');
 
     this.mixer = new THREE.AnimationMixer(obj);
     for (const [clip, re] of Object.entries(CLIP_PATTERNS) as [Clip, RegExp][]) {
@@ -205,6 +326,13 @@ export class CharacterModel implements Rig {
   }
 
   setShirt(color: string, accent: string): void {
+    if (this.palette) {
+      const u = this.palette.mat.userData;
+      for (const i of this.palette.shirtParts) (u.palette.value as THREE.Color[])[i].set(color);
+      if (this.palette.shirtParts.length) u.patPart.value = this.palette.shirtParts[0];
+      (u.accent.value as THREE.Color).set(accent);
+      return;
+    }
     for (const m of this.shirtMats) {
       m.color.set('#ffffff');
       m.map = hawaiianShirt(color, accent);
@@ -218,13 +346,14 @@ export class CharacterModel implements Rig {
 }
 
 /** Pick a model that suits the outfit; fall back to the procedural rig. */
-export function createRig(outfit: Outfit, opts: { female?: boolean; seed?: number } = {}): Rig {
+export function createRig(outfit: Outfit, opts: { female?: boolean; seed?: number; separateParts?: boolean } = {}): Rig {
   if (ASSETS.people.size) {
     const seed = opts.seed ?? Math.floor(Math.random() * 1000);
     const female: PersonModel[] = ['woman_casual', 'woman_tank', 'woman_dress', 'woman_jacket'];
     const model: PersonModel = opts.female ? female[seed % female.length] : 'man';
     try {
-      return new CharacterModel(model, outfit);
+      // NPCs are merged into one draw call; the player keeps separate parts for shop customisation
+      return new CharacterModel(model, outfit, !opts.separateParts);
     } catch (err) {
       console.warn('[rig] falling back to procedural', err);
     }

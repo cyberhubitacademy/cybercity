@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import type { CollisionWorld } from '../world/Collision';
 import { BEACH_X, isWater } from '../world/layout';
 import { ASSETS, type CarModel } from '../assets/Assets';
-import { chromeMat, customPaint, darkMat, glassMat, headMat, paint, rimMat, seatMat, tailMat, tireMat, type Finish } from './materials';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {
+  LIGHT_COLOR, PART_COLOR, chromeMat, customPaint, darkMat, glassMat, headMat, lightU, lightsMat, paint, partU, partsMat, rimMat, seatMat, tailMat, tireMat,
+  type Finish, type LightId, type PartId,
+} from './materials';
 import { buildAirboat, buildBicycle, buildDirtBike, buildHeli, buildJetSki, buildKayak, emptyBuilt, type BuiltMesh } from './meshes';
 import {
   NO_UPGRADES, applyDamage, gripCurve, healthState, impactDamage, landingDamage, sanitizeUpgrades, springStep, torqueCurve, tunedStats,
@@ -146,64 +150,250 @@ const MODEL_FOR: Partial<Record<VehicleKind, CarModel[]>> = {
 };
 const KEEP_COLOR = /taxi|police|truck|pickup/;
 
-/** Build a vehicle from a loaded CC0 model: paint, glass, lights, pivoted wheels. */
-function modelVehicle(def: VehicleDef, color: string): { root: THREE.Group; wheels: THREE.Group[]; steerWheels: THREE.Group[] } | null {
-  const options = MODEL_FOR[def.kind];
-  if (!options) return null;
-  const model = options[[...color].reduce((n, c) => n + c.charCodeAt(0), 0) % options.length];
+type PartRole = 'paint' | 'parts' | 'lights' | 'atlas';
+interface PartGeo { geometry: THREE.BufferGeometry; role: PartRole }
+interface WheelTemplate { position: THREE.Vector3; parts: PartGeo[]; front: boolean }
+/** One merged car model, shared by every car of that model + kind (only paint differs). */
+interface CarTemplate { parts: PartGeo[]; wheels: WheelTemplate[]; atlas: THREE.Material | null; keepPaint: string | null }
+/** Vertex ranges of each atlas part inside a merged geometry (for rim / tint recolors). */
+interface PartRanges { ranges?: Partial<Record<PartId, [number, number][]>> }
+/** One material slot of a source mesh, classified for merging. */
+interface Primitive { geometry: THREE.BufferGeometry; source: THREE.Material; role: PartRole; part?: PartId; u: number; color: string | null }
+interface Baked { geometry: THREE.BufferGeometry; role: PartRole; part?: PartId }
+
+const templates = new Map<string, CarTemplate | null>();
+const _m4 = new THREE.Matrix4();
+const _col = new THREE.Color();
+
+/** How a source material of a CC0 car is drawn after merging. */
+function classify(name: string, wheel: boolean): { role: PartRole; part?: PartId; light?: LightId } {
+  const n = name.toLowerCase();
+  if (n.includes('window')) return { role: 'parts', part: 'glass' };
+  if (n.includes('headlight') || n === 'whitelights') return { role: 'lights', light: 'head' };
+  if (n.includes('taillight') || n.includes('brake')) return { role: 'lights', light: 'tail' };
+  if (n === 'bluelights') return { role: 'lights', light: 'blue' };
+  if (n === 'black') return { role: 'parts', part: wheel ? 'tire' : 'trim' };
+  if (n === 'grey' || n === 'gray') return { role: 'parts', part: wheel ? 'rim' : 'chrome' };
+  if (n === 'atlas') return { role: 'atlas' };
+  return { role: 'paint' }; // body color
+}
+
+/** A mesh's material slots with their merged role and atlas slot. */
+function primitives(mesh: THREE.Mesh, wheel: boolean): Primitive[] {
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const pieces = Array.isArray(mesh.material) && mesh.geometry.groups.length
+    ? mesh.geometry.groups.map((gr) => ({ geometry: groupGeometry(mesh.geometry, gr.start, gr.count), mat: mats[gr.materialIndex ?? 0] }))
+    : [{ geometry: mesh.geometry, mat: mats[0] }];
+  const out: Primitive[] = [];
+  for (const p of pieces) {
+    if (!p.mat) continue;
+    const c = classify(p.mat.name || '', wheel);
+    const u = c.part ? partU(c.part) : c.light ? lightU(c.light) : 0;
+    const color = c.part ? PART_COLOR[c.part] : c.light ? LIGHT_COLOR[c.light] : null;
+    out.push({ geometry: p.geometry, source: p.mat, role: c.role, part: c.part, u, color });
+  }
+  return out;
+}
+
+/** Sub-geometry for one draw group of a multi-material mesh (GLTFLoader rarely makes these). */
+function groupGeometry(g: THREE.BufferGeometry, start: number, count: number): THREE.BufferGeometry {
+  const src = g.index ? g.toNonIndexed() : g;
+  const out = new THREE.BufferGeometry();
+  for (const name of Object.keys(src.attributes)) {
+    const a = src.getAttribute(name) as THREE.BufferAttribute;
+    const end = Math.min(a.count, start + count);
+    out.setAttribute(name, new THREE.BufferAttribute((a.array as Float32Array).slice(start * a.itemSize, end * a.itemSize), a.itemSize));
+  }
+  return out;
+}
+
+/** Copy of a primitive with only the attributes its role needs, baked by `m`. */
+function bake(p: Primitive, m: THREE.Matrix4): Baked {
+  const src = p.geometry;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', src.getAttribute('position').clone());
+  const nrm = src.getAttribute('normal');
+  if (nrm) g.setAttribute('normal', nrm.clone());
+  if (src.index) g.setIndex(src.index.clone());
+  g.applyMatrix4(m);
+  if (!nrm) g.computeVertexNormals();
+  const count = g.getAttribute('position').count;
+  if (p.role === 'atlas') {
+    const uv = src.getAttribute('uv');
+    g.setAttribute('uv', uv ? uv.clone() : new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+  } else if (p.role === 'parts' || p.role === 'lights') {
+    _col.set(p.color ?? '#ffffff');
+    const cols = new Float32Array(count * 3), uvs = new Float32Array(count * 2);
+    for (let i = 0; i < count; i++) {
+      cols[i * 3] = _col.r; cols[i * 3 + 1] = _col.g; cols[i * 3 + 2] = _col.b;
+      uvs[i * 2] = p.u; uvs[i * 2 + 1] = 0.5;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  }
+  return { geometry: g, role: p.role, part: p.part };
+}
+
+/** Merge baked primitives per role (one geometry per material). */
+function mergeByRole(items: Baked[]): PartGeo[] {
+  const out: PartGeo[] = [];
+  for (const role of ['paint', 'parts', 'lights', 'atlas'] as PartRole[]) {
+    let list = items.filter((it) => it.role === role);
+    if (!list.length) continue;
+    if (list.some((it) => !it.geometry.index)) list = list.map((it) => ({ ...it, geometry: it.geometry.index ? it.geometry.toNonIndexed() : it.geometry }));
+    const merged = list.length === 1 ? list[0].geometry : mergeGeometries(list.map((it) => it.geometry), false);
+    if (!merged) throw new Error(`car merge failed (${role})`);
+    if (role === 'parts') {
+      const ranges: Partial<Record<PartId, [number, number][]>> = {};
+      let start = 0;
+      for (const it of list) {
+        const c = it.geometry.getAttribute('position').count;
+        if (it.part) (ranges[it.part] ??= []).push([start, c]);
+        start += c;
+      }
+      (merged.userData as PartRanges).ranges = ranges;
+    }
+    merged.computeBoundingSphere();
+    merged.computeBoundingBox();
+    out.push({ geometry: merged, role });
+  }
+  return out;
+}
+
+const atlasCache = new Map<THREE.Material, THREE.Material>();
+/** Textured Quaternius atlas (pickup, truck): one shared material per source. */
+function atlasMaterial(src: THREE.Material): THREE.Material {
+  let m = atlasCache.get(src);
+  if (!m) {
+    const k = (src as THREE.MeshStandardMaterial).clone();
+    k.roughness = 0.42;
+    k.metalness = 0.25;
+    k.envMapIntensity = 1;
+    m = k;
+    atlasCache.set(src, m);
+  }
+  return m;
+}
+
+/**
+ * Merge a loaded CC0 model into a template: all static body primitives that end up
+ * with the same material become one geometry; each wheel node becomes one merged
+ * mesh around its own axle center. Built once per model + kind (scale is per kind).
+ */
+function carTemplate(def: VehicleDef, model: CarModel): CarTemplate | null {
+  const key = `${model}|${def.kind}`;
+  if (templates.has(key)) return templates.get(key) ?? null;
+  let t: CarTemplate | null = null;
   const src = ASSETS.cars.get(model);
-  if (!src) return null;
-  const obj = src.scene.clone(true);
+  if (src) {
+    try {
+      t = buildTemplate(def, model, src.scene);
+    } catch (err) {
+      console.warn('[vehicles] car merge failed, using the procedural car', model, err);
+    }
+  }
+  if (src || t) templates.set(key, t); // not loaded yet: try again next time
+  return t;
+}
+
+function buildTemplate(def: VehicleDef, model: CarModel, scene: THREE.Object3D): CarTemplate {
+  const obj = scene.clone(true);
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(obj);
   const size = box.getSize(new THREE.Vector3());
   const s = def.length / (size.z || 1);
-  const root = new THREE.Group();
+  // The holder stands in for the car root (at the origin), so world space == root space.
   const holder = new THREE.Group();
   holder.scale.setScalar(s);
   holder.position.set(-((box.min.x + box.max.x) / 2) * s, -box.min.y * s, -((box.min.z + box.max.z) / 2) * s);
   holder.add(obj);
-  root.add(holder);
-  root.updateMatrixWorld(true);
+  holder.updateMatrixWorld(true);
+  const keep = KEEP_COLOR.test(model);
+  let atlas: THREE.Material | null = null;
+  let keepPaint: string | null = null;
+  const note = (p: Primitive): void => {
+    if (p.role === 'atlas' && !atlas) atlas = atlasMaterial(p.source);
+    if (p.role === 'paint' && keep && !keepPaint) {
+      const c = (p.source as THREE.MeshStandardMaterial).color;
+      if (c) keepPaint = `#${c.getHexString()}`;
+    }
+  };
+  const meshes: THREE.Mesh[] = [];
+  obj.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+  const body: Baked[] = [];
+  const wheelNodes = new Map<THREE.Object3D, THREE.Mesh[]>();
+  for (const mesh of meshes) {
+    // multi-material glTF nodes load as a group of meshes: group them by that node
+    const node = mesh.parent && /wheel/i.test(mesh.parent.name) ? mesh.parent : /wheel/i.test(mesh.name) ? mesh : null;
+    if (node) {
+      const list = wheelNodes.get(node) ?? [];
+      list.push(mesh);
+      wheelNodes.set(node, list);
+      continue;
+    }
+    for (const p of primitives(mesh, false)) {
+      note(p);
+      body.push(bake(p, mesh.matrixWorld));
+    }
+  }
+  const wheels: WheelTemplate[] = [];
+  for (const [node, list] of wheelNodes) {
+    const wb = new THREE.Box3();
+    for (const m of list) wb.expandByObject(m);
+    const c = wb.getCenter(new THREE.Vector3());
+    const toPivot = new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z);
+    const items: Baked[] = [];
+    for (const m of list) {
+      for (const p of primitives(m, true)) {
+        note(p);
+        items.push(bake(p, _m4.multiplyMatrices(toPivot, m.matrixWorld)));
+      }
+    }
+    wheels.push({ position: c, parts: mergeByRole(items), front: /front/i.test(node.name) || list.some((m) => /front/i.test(m.name)) });
+  }
+  return { parts: mergeByRole(body), wheels, atlas, keepPaint };
+}
+
+function roleMaterial(role: PartRole, t: CarTemplate, body: THREE.Material): THREE.Material {
+  return role === 'paint' ? body : role === 'parts' ? partsMat : role === 'lights' ? lightsMat : t.atlas ?? partsMat;
+}
+
+/**
+ * Build a vehicle from a loaded CC0 model: merged paint / parts / lights meshes
+ * (shared geometry per model) plus one merged mesh per pivoted wheel.
+ */
+function modelVehicle(def: VehicleDef, color: string): { root: THREE.Group; wheels: THREE.Group[]; steerWheels: THREE.Group[] } | null {
+  const options = MODEL_FOR[def.kind];
+  if (!options) return null;
+  const model = options[[...color].reduce((n, c) => n + c.charCodeAt(0), 0) % options.length];
+  const t = carTemplate(def, model);
+  if (!t) return null;
+  const root = new THREE.Group();
+  const body = paint(t.keepPaint ?? color);
+  for (const p of t.parts) {
+    const mesh = new THREE.Mesh(p.geometry, roleMaterial(p.role, t, body));
+    mesh.name = `car_${p.role}`;
+    mesh.userData.part = p.role;
+    mesh.castShadow = p.role !== 'lights';
+    mesh.receiveShadow = true;
+    root.add(mesh);
+  }
   const wheels: THREE.Group[] = [];
   const steer: THREE.Group[] = [];
-  const paintMat = paint(color);
-  const wheelMeshes: THREE.Mesh[] = [];
-  obj.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    if (/wheel/i.test(mesh.name) || /wheel/i.test(mesh.parent?.name ?? '')) wheelMeshes.push(mesh);
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const next = mats.map((m) => {
-      const n = (m.name || '').toLowerCase();
-      if (n.includes('window')) return glassMat;
-      if (n.includes('headlight') || n === 'whitelights') return headMat;
-      if (n.includes('taillight') || n.includes('brake')) return tailMat;
-      if (n === 'bluelights') return new THREE.MeshStandardMaterial({ color: '#2244ff', emissive: '#3355ff', emissiveIntensity: 2 });
-      if (n === 'black') return tireMat;
-      if (n === 'grey' || n === 'gray') return rimMat;
-      if (n === 'atlas' || KEEP_COLOR.test(model)) {
-        const k = (m as THREE.MeshStandardMaterial).clone();
-        k.roughness = 0.35;
-        k.metalness = 0.3;
-        return k;
-      }
-      return paintMat; // body color
-    });
-    mesh.material = Array.isArray(mesh.material) ? next : next[0];
-  });
-  // Re-parent each wheel under a pivot at its own center so it spins on its axle.
-  for (const w of wheelMeshes) {
-    const wb = new THREE.Box3().setFromObject(w);
-    const c = wb.getCenter(new THREE.Vector3());
+  for (const w of t.wheels) {
     const pivot = new THREE.Group();
-    pivot.position.copy(root.worldToLocal(c.clone()));
+    pivot.name = 'wheel';
+    pivot.position.copy(w.position);
+    for (const p of w.parts) {
+      const mesh = new THREE.Mesh(p.geometry, roleMaterial(p.role, t, body));
+      mesh.name = `wheel_${p.role}`;
+      mesh.userData.part = p.role;
+      mesh.castShadow = true;
+      pivot.add(mesh);
+    }
     root.add(pivot);
-    pivot.attach(w);
     wheels.push(pivot);
-    if (/front/i.test(w.name) || /front/i.test(w.parent?.name ?? '')) steer.push(pivot);
+    if (w.front) steer.push(pivot);
   }
   return { root, wheels, steerWheels: steer };
 }
@@ -476,6 +666,13 @@ export class Vehicle {
   };
   private dents = new Map<THREE.Mesh, THREE.BufferGeometry>();
   private dentTotal = 0;
+  /** Geometries this car owns (dent / recolor copies); template geometry is shared and never written. */
+  private ownGeo = new Set<THREE.BufferGeometry>();
+  /** Merged atlas meshes (tyres, rims, trim, glass) recolored per vertex range by applyLook. */
+  private partMeshes: THREE.Mesh[] = [];
+  /** Meshes that cast shadows when the car is near the camera. */
+  private casters: THREE.Mesh[] = [];
+  private shadowsOn = true;
 
   constructor(readonly def: VehicleDef, color?: string) {
     this.color = color ?? def.colors[Math.floor(Math.random() * def.colors.length)];
@@ -513,9 +710,11 @@ export class Vehicle {
     this.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
+      if (mesh.castShadow) this.casters.push(mesh);
+      if ((mesh.geometry.userData as PartRanges).ranges) this.partMeshes.push(mesh);
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       mats.forEach((m, index) => {
-        if (m === body) this.paintSlots.push({ mesh, index });
+        if (m === body || mesh.userData.part === 'paint') this.paintSlots.push({ mesh, index });
         else if (m === rimMat) this.rimSlots.push({ mesh, index });
         else if (m === glassMat) this.glassSlots.push({ mesh, index });
       });
@@ -524,6 +723,13 @@ export class Vehicle {
 
   get medium(): Medium {
     return mediumOf(this.def);
+  }
+
+  /** Shadow LOD: far cars skip the shadow pass. Cheap to call every frame (no-op unless it flips). */
+  setCastShadows(on: boolean): void {
+    if (on === this.shadowsOn) return;
+    this.shadowsOn = on;
+    for (const m of this.casters) m.castShadow = on;
   }
 
   get dead(): boolean {
@@ -601,7 +807,8 @@ export class Vehicle {
       if (bs.center.distanceTo(_v) > bs.radius + rad) return;
       if (!this.dents.has(mesh)) {
         this.dents.set(mesh, g0);
-        mesh.geometry = g0.clone();
+        mesh.geometry = g0.clone(); // template geometry is shared by every car of the model
+        this.ownGeo.add(mesh.geometry);
       }
       const pos = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
       const cx = bs.center.x, cy = bs.center.y, cz = bs.center.z;
@@ -627,6 +834,7 @@ export class Vehicle {
 
   resetDents(): void {
     for (const [mesh, g] of this.dents) {
+      this.ownGeo.delete(mesh.geometry);
       mesh.geometry.dispose();
       mesh.geometry = g;
     }
@@ -644,16 +852,37 @@ export class Vehicle {
     const rim = look.wheel ? new THREE.MeshStandardMaterial({ color: look.wheel, metalness: 0.85, roughness: 0.25 }) : rimMat;
     for (const s of this.rimSlots) setSlot(s, rim);
     const t = Math.max(0, Math.min(3, Math.round(look.tint)));
+    const tint = [PART_COLOR.glass, '#07090c', '#040507', '#010102'][t];
     const glass = t === 0 ? glassMat : glassMat.clone();
-    if (t > 0) {
-      glass.color.set(['#16202e', '#0e131c', '#07090e', '#020203'][t]);
-      glass.opacity = 0.88 + t * 0.035;
-    }
+    if (t > 0) glass.color.set(tint);
     for (const s of this.glassSlots) setSlot(s, glass);
+    // merged CC0 cars: rims and glass are vertex-colored ranges of the shared parts material
+    for (const m of this.partMeshes) {
+      this.recolorPart(m, 'rim', look.wheel ?? PART_COLOR.rim);
+      this.recolorPart(m, 'glass', tint);
+    }
     for (const k of Object.keys(this.panels) as PanelId[]) {
       const pv = this.panels[k].pivot;
-      if (pv) pv.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.material = p; });
+      if (pv) pv.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material !== glassMat) m.material = p; });
     }
+  }
+
+  /** Write a vertex color into one part's ranges, copying shared template geometry first. */
+  private recolorPart(mesh: THREE.Mesh, part: PartId, color: string): void {
+    const ranges = (mesh.geometry.userData as PartRanges).ranges?.[part];
+    if (!ranges) return;
+    _col.set(color);
+    const own = (g: THREE.BufferGeometry): THREE.BufferGeometry => {
+      if (!this.ownGeo.has(g)) { g = g.clone(); this.ownGeo.add(g); }
+      const c = g.getAttribute('color') as THREE.BufferAttribute | undefined;
+      if (!c) return g;
+      for (const [start, count] of ranges) for (let i = start; i < start + count; i++) c.setXYZ(i, _col.r, _col.g, _col.b);
+      c.needsUpdate = true;
+      return g;
+    };
+    mesh.geometry = own(mesh.geometry);
+    const base = this.dents.get(mesh); // keep the look after a repair restores the undented geometry
+    if (base) this.dents.set(mesh, own(base));
   }
 
   isPanelOpen(id: PanelId): boolean {

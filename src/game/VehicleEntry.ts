@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Vehicle } from '../vehicles/Vehicle';
+import { PAINT_ROLE, glassMat as carGlass } from '../vehicles/materials';
 import type { Rig } from '../actors/CharacterModel';
 
 // Animated car entry/exit and carjacking: walk to the driver's door, swing it
@@ -36,20 +37,21 @@ function findPaint(root: THREE.Object3D): THREE.Material | null {
   let paint: THREE.Material | null = null;
   root.traverse((o) => {
     if (paint) return;
-    const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined;
-    if (m && !Array.isArray(m) && 'clearcoat' in m && m.clearcoat > 0 && !m.transparent) paint = m;
+    const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+    if (m && !Array.isArray(m) && m.userData.role === PAINT_ROLE) paint = m;
   });
   return paint;
 }
 
+/** Car glass is opaque now (merged cars carry it in their parts atlas): use the shared material. */
 function findGlass(root: THREE.Object3D): THREE.Material | null {
   let glass: THREE.Material | null = null;
   root.traverse((o) => {
     if (glass) return;
     const m = (o as THREE.Mesh).material as THREE.Material | undefined;
-    if (m && !Array.isArray(m) && m.transparent) glass = m;
+    if (m && !Array.isArray(m) && (m.transparent || m.name === carGlass.name)) glass = m;
   });
-  return glass;
+  return glass ?? carGlass;
 }
 
 export class VehicleEntry {

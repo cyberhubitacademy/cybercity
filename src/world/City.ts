@@ -24,8 +24,15 @@ export interface NightLit {
   kind: 'emissive' | 'color';
 }
 
+/** Flat roof (or lawn) rectangle recorded for StreetDetail; y is the walkable top. */
+export interface RoofRect { x0: number; z0: number; x1: number; z1: number; y: number; kind: FacadeKind }
+
 export class CityBuilder {
   readonly group = new THREE.Group();
+  /** Lawn rectangles (parks, campus quads) where StreetDetail plants trees. */
+  readonly lawns: { x0: number; z0: number; x1: number; z1: number }[] = [];
+  /** Roof tops where StreetDetail adds vents and water towers. */
+  readonly roofs: RoofRect[] = [];
   readonly collision = new CollisionWorld();
   readonly nightLit: NightLit[] = [];
   readonly animated: ((t: number) => void)[] = [];
@@ -123,11 +130,12 @@ export class CityBuilder {
       map: maps.map,
       roughnessMap: maps.roughness,
       roughness: 1,
-      metalness: glassy ? 0.55 : kind === 'datacenter' ? 0.25 : 0.05,
+      metalnessMap: maps.metalness,
+      metalness: 1, // the map decides: reflective window glass, matte walls
       emissive: new THREE.Color('#ffffff'),
       emissiveMap: maps.emissive,
       emissiveIntensity: 0,
-      envMapIntensity: glassy ? 1.4 : 0.6,
+      envMapIntensity: glassy ? 1.3 : 1.0,
     });
     m.userData.tile = maps.tile;
     this.matCache.set(key, m);
@@ -268,6 +276,7 @@ export class CityBuilder {
       const t = grass();
       this.grassMat = pbr('grass', 1, 1, '#d8f0c0') ?? new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, color: '#c7f0b0' });
     }
+    this.lawns.push({ x0, z0, x1, z1 });
     const geo = this.tiledBox(x1 - x0, 0.22, z1 - z0, 8, 8);
     this.mesh(geo, this.grassMat, (x0 + x1) / 2, 0.11, (z0 + z1) / 2, false, true);
   }
@@ -323,7 +332,9 @@ export class CityBuilder {
     // back row: smaller apartments
     if (!southHalfOnly) {
       for (let zz = b.z0 + 8; zz < b.z1 - 20; zz += 26) {
-        this.building(b.x0 + 6, zz, b.x0 + 26, zz + 20, 8 + this.rnd() * 10, 'deco', this.pick(CityBuilder.PASTELS), 2);
+        const h = 8 + this.rnd() * 10;
+        this.building(b.x0 + 6, zz, b.x0 + 26, zz + 20, h, 'deco', this.pick(CityBuilder.PASTELS), 2);
+        this.roofs.push({ x0: b.x0 + 6, z0: zz, x1: b.x0 + 26, z1: zz + 20, y: h, kind: 'deco' });
       }
     }
   }
@@ -332,6 +343,7 @@ export class CityBuilder {
   decoBuilding(x0: number, z0: number, x1: number, z1: number, h: number, color: string, trim: string, name: string, neonColor: string): void {
     this.building(x0, z0, x1, z1, h, 'deco', color, 1 + Math.floor(this.rnd() * 3));
     this.facadeDetail(x1 + 0.6, z0, z1, h);
+    this.roofs.push({ x0, z0, x1, z1, y: h + 0.9, kind: 'deco' });
     // horizontal eyebrow bands on the facade
     for (let y = 3.4; y < h - 1; y += 3.6) this.band(x1, z0 + 0.5, x1 + 0.6, z1 - 0.5, y, 0.25, '#ffffff');
     this.band(x0 - 0.3, z0 - 0.3, x1 + 0.3, z1 + 0.3, h, 0.9, trim);
@@ -368,9 +380,11 @@ export class CityBuilder {
       if (this.rnd() < 0.6) {
         const inset = 4;
         this.building(x0 + shrink + inset, z0 + shrink + inset, x1 - shrink - inset, z1 - shrink - inset, 10, 'glass', color, 2, h);
+        this.roofs.push({ x0: x0 + shrink + inset, z0: z0 + shrink + inset, x1: x1 - shrink - inset, z1: z1 - shrink - inset, y: h + 10.5, kind: 'glass' });
         this.band(x0 + shrink + inset - 0.2, z0 + shrink + inset - 0.2, x1 - shrink - inset + 0.2, z1 - shrink - inset + 0.2, h + 10, 0.5, this.pick(CityBuilder.NEONS), 3);
       } else {
         this.band(x0 + shrink - 0.2, z0 + shrink - 0.2, x1 - shrink + 0.2, z1 - shrink + 0.2, h, 0.6, this.pick(CityBuilder.NEONS), 3);
+        this.roofs.push({ x0: x0 + shrink, z0: z0 + shrink, x1: x1 - shrink, z1: z1 - shrink, y: h + 0.6, kind: 'glass' });
       }
     }
     if (this.rnd() < 0.5) this.rooftopBillboard(midX, b.z0 + 10, 6);
@@ -407,6 +421,7 @@ export class CityBuilder {
         this.building(x, z0, x + w, z0 + d, h, 'house', col, 1 + Math.floor(this.rnd() * 3));
         // terracotta roof slab + awning
         this.band(x - 0.5, z0 - 0.5, x + w + 0.5, z0 + d + 0.5, h, 0.6, '#e07a5f');
+        this.roofs.push({ x0: x, z0, x1: x + w, z1: z0 + d, y: h + 0.6, kind: 'house' });
         const awningZ = side === 0 ? z0 + d : z0 - 1.6;
         this.band(x + 2, awningZ, x + w - 2, awningZ + 1.6, 2.8, 0.2, this.pick(CityBuilder.TRIMS));
       }
@@ -417,7 +432,9 @@ export class CityBuilder {
   private harborFill(b: Block): void {
     const colors = ['#ff9f6b', '#5fc9c9', '#f6e3b4', '#c4d6e8', '#ff7fa8'];
     for (let x = b.x0 + 6; x < b.x1 - 20; x += 36) {
-      this.building(x, b.z0 + 8, x + 30, b.z0 + 40, 10 + this.rnd() * 6, 'warehouse', this.pick(colors), 1);
+      const h = 10 + this.rnd() * 6;
+      this.building(x, b.z0 + 8, x + 30, b.z0 + 40, h, 'warehouse', this.pick(colors), 1);
+      this.roofs.push({ x0: x, z0: b.z0 + 8, x1: x + 30, z1: b.z0 + 40, y: h, kind: 'warehouse' });
     }
     this.containers(b.x0 + 8, b.z1 - 26, b.x1 - 8, b.z1 - 6);
   }
@@ -456,6 +473,7 @@ export class CityBuilder {
     const colors = ['#d9a066', '#8fb3c9', '#c98f8f', '#a9c9a0', '#e6c27a'];
     this.building(b.x0 + 8, b.z0 + 8, b.x0 + 46, b.z0 + 40, 14, 'warehouse', this.pick(colors), 1);
     this.building(b.x0 + 8, b.z0 + 46, b.x1 - 8, b.z1 - 8, 9, 'warehouse', this.pick(colors), 1);
+    this.roofs.push({ x0: b.x0 + 8, z0: b.z0 + 8, x1: b.x0 + 46, z1: b.z0 + 40, y: 14, kind: 'warehouse' }, { x0: b.x0 + 8, z0: b.z0 + 46, x1: b.x1 - 8, z1: b.z1 - 8, y: 9, kind: 'warehouse' });
     // smokestacks + storage tanks
     const stackMat = this.plainMat('#b5654a', 0.8);
     for (let i = 0; i < 2; i++) {
@@ -476,6 +494,7 @@ export class CityBuilder {
     const brick = '#e8a87c';
     this.building(b.x0 + 8, b.z0 + 8, b.x1 - 8, b.z0 + 26, 14, 'campus', brick, 1);
     this.building(b.x0 + 8, b.z1 - 24, b.x0 + 34, b.z1 - 8, 11, 'campus', '#f2c6a0', 2);
+    this.roofs.push({ x0: b.x0 + 8, z0: b.z0 + 8, x1: b.x1 - 8, z1: b.z0 + 26, y: 14, kind: 'campus' }, { x0: b.x0 + 8, z0: b.z1 - 24, x1: b.x0 + 34, z1: b.z1 - 8, y: 11, kind: 'campus' });
     // clock tower landmark
     const cx = b.x1 - 20, cz = b.z1 - 18;
     this.building(cx - 4, cz - 4, cx + 4, cz + 4, 34, 'campus', '#f5e6d3', 3);

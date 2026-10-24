@@ -178,7 +178,10 @@ export class LifeSystem implements GameSystem {
   private applyShape(ctx: SystemContext): void {
     const s = bodyShape(this.state);
     const k = `${s.width.toFixed(3)}|${s.bulk.toFixed(3)}`;
-    const root = ctx.world.player.rig.root;
+    const rig = ctx.world.player.rig;
+    const root = rig.root;
+    // the body can be swapped (character switching): bind the bone poser to the current rig
+    if (this.poser && this.poser.rig !== rig) { this.poser = new RigPoser(rig); this.shapeKey = ''; }
     if (k === this.shapeKey && Math.abs(root.scale.x - s.width) < 1e-4) return;
     this.shapeKey = k;
     root.scale.set(s.width, 1, s.width);
@@ -204,8 +207,10 @@ export class LifeSystem implements GameSystem {
     const BOOST: Record<string, string> = { energy: '⚡ Energized', protein: '💪 Gains ×2', coffee: '☕ Caffeinated', tipsy: '🍹 Tipsy' };
     this.warnEl.innerHTML = ws.map((w) => `<div class="lf-warn${bad.has(w) ? ' bad' : ''}">${WARN_TEXT[w]}</div>`).join('')
       + boosts.map((b) => `<div class="lf-warn" style="border-left-color:#72cc72;animation:none">${BOOST[b] ?? b}</div>`).join('');
-    if (ws.includes('starving') || ws.includes('dehydrated')) ctx.notify('Rico needs food and water — stamina is suffering. Find a [y]food truck[/y] or vending machine.', 'warn');
-    else if (ws.includes('exhausted')) ctx.notify('Rico is exhausted. [y]Sleep[/y] at the safehouse or drink an espresso.', 'warn');
+    // first name of whoever is being played (Rico or Maya, see the switching system)
+    const who = ((ctx.system('switching') as unknown as { currentDef?(): { name: string } } | undefined)?.currentDef?.().name ?? 'Rico').split(' ')[0];
+    if (ws.includes('starving') || ws.includes('dehydrated')) ctx.notify(`${who} needs food and water — stamina is suffering. Find a [y]food truck[/y] or vending machine.`, 'warn');
+    else if (ws.includes('exhausted')) ctx.notify(`${who} is exhausted. [y]Sleep[/y] at the safehouse or drink an espresso.`, 'warn');
   }
 
   private updateHint(ctx: SystemContext): void {

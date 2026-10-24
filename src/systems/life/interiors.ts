@@ -93,6 +93,7 @@ export class InteriorManager {
     this.light = new THREE.PointLight('#fff1dc', 0, 30, 1.4);
     this.light2 = new THREE.PointLight('#fff1dc', 0, 30, 1.4);
     this.light.castShadow = false;
+    this.light.userData.keep = this.light2.userData.keep = true; // interiors need them on every quality tier
     scene.add(this.light, this.light2);
   }
 

@@ -110,8 +110,8 @@ export class Game {
     this.ui.showLoading(10, 'Painting the sunset…');
     this.renderer = new Renderer(canvas, new THREE.Scene(), this.camera, this.settings.quality);
     this.renderer.onAdjust = ({ shed }) => {
-      // shed level 2+: drop real-time shadows to keep the frame rate up
-      this.world?.env.setShadows(this.settings.shadows && shed < 2);
+      // shed level 3 (last resort): drop real-time shadows to keep the frame rate up
+      this.world?.env.setShadows(this.settings.shadows && shed < 3);
     };
     this.renderer.onContextLost = () => {
       this.ui.notify('Your graphics driver reset. Progress is saved — reload the page, and try Settings → Graphics → Low if it repeats.', 'warn');
@@ -179,7 +179,7 @@ export class Game {
     // Esc while the mouse is captured: the browser releases the cursor itself (the key never
     // reaches the page), so treat losing the lock during play as "pause", like GTA.
     document.addEventListener('pointerlockchange', () => {
-      if (!this.input.locked && this.mode === 'playing' && this.input.captureWanted && !this.busy && !this.director.inCinematic) {
+      if (!this.input.locked && this.mode === 'playing' && this.input.captureWanted && !this.busy && !this.inCinematic) {
         void this.openPause();
       }
     });
@@ -230,6 +230,8 @@ export class Game {
       ['Right mouse', 'Aim'],
       ['Left mouse', 'Shoot / punch'],
       ['Q (hold)', 'Weapon wheel · move mouse, click to pick'],
+      ['Alt (hold)', 'Switch character · move mouse / arrows, release'],
+      ['F5 / F6', 'Quick switch to Rico / Maya'],
       ['Mouse wheel', 'Next / previous weapon'],
       ['X', 'Put the gun away / take it out'],
       ['R', 'Reload · next radio station in cars'],
@@ -305,11 +307,13 @@ export class Game {
         return true;
       },
       modal: (fn) => game.modal(fn),
-      isBusy: () => game.busy || game.director.inCinematic,
+      isBusy: () => game.busy || game.inCinematic,
       save: () => game.save(),
       getData: <T,>(id: string, fallback: T): T => (id in game.profile.ext ? (game.profile.ext[id] as T) : fallback),
       setData: (id, v) => { game.profile.ext[id] = v; },
       system: <T extends GameSystem>(id: string) => game.systems.get<T>(id),
+      // only a playing mission scene locks switching; travel/free-roam parts of a mission don't (GTA-like)
+      missionActive: () => game.director.inCinematic,
     };
   }
 
@@ -428,6 +432,26 @@ export class Game {
     this.showControlsCard();
   }
 
+  /**
+   * Keep any device smooth: every point/spot light in the scene is paid for by every
+   * pixel shader even at intensity 0, so lower tiers drop them (the game is daylight
+   * only); then compile all shaders up front so nothing hitches the first time it appears.
+   */
+  private optimizeScene(): void {
+    const scene = this.world.scene;
+    const q = this.settings.quality;
+    if (q === 'low' || q === 'medium') {
+      const drop: THREE.Light[] = [];
+      scene.traverse((o) => {
+        const l = o as THREE.Light;
+        if (((l as THREE.PointLight).isPointLight || (l as THREE.SpotLight).isSpotLight) && !l.userData.keep) drop.push(l);
+      });
+      for (const l of drop) l.removeFromParent();
+    }
+    const r = this.renderer.renderer;
+    void r.compileAsync(scene, this.camera).catch(() => undefined);
+  }
+
   private enterWorld(): void {
     const p = this.profile;
     if (this.world.vehicle) this.world.exitVehicle();
@@ -436,6 +460,7 @@ export class Game {
     this.world.hour = daylight(p.hour);
     this.applyProfileEffects();
     this.systems.init(this.sysCtx);
+    this.optimizeScene();
     this.mode = 'playing';
     this.input.captureWanted = true;
     this.input.lockPointer();
@@ -516,6 +541,11 @@ export class Game {
   private sfx = (name: SfxId): void => this.audio.sfx(name);
 
   /** Run a blocking UI screen: frees the mouse, freezes input, restores after. */
+  /** A story cutscene or a system's own cinematic (character switch) owns the camera. */
+  private get inCinematic(): boolean {
+    return this.director.inCinematic || this.systems.inCinematic();
+  }
+
   private async modal<T>(fn: () => Promise<T>): Promise<T> {
     this.busy = true;
     this.input.captureWanted = false;
@@ -997,7 +1027,7 @@ export class Game {
 
   private handleKeys(): void {
     const i = this.input;
-    if (this.busy || this.director.inCinematic) return;
+    if (this.busy || this.inCinematic) return;
     if (i.wasPressed('Escape')) { void this.openPause(); return; }
     if (i.wasPressed('Tab')) { void this.openPause('missions'); return; }
     if (i.wasPressed('KeyI')) { void this.openPause('inventory'); return; }
@@ -1266,9 +1296,9 @@ export class Game {
       this.handleKeys();
       // Slow motion scales game time only; UI and camera keep real time.
       if (this.timeScale < 1 && performance.now() > this.slowUntil) this.timeScale = 1;
-      const gdt = dt * Math.min(this.timeScale, (this.systems.get('combat') as unknown as { timeScale?(): number } | undefined)?.timeScale?.() ?? 1);
+      const gdt = dt * Math.min(this.timeScale, this.systems.timeScale()); // combat Focus, switch wheel...
       if (!this.busy) {
-        w.update(gdt, this.input, !this.director.inCinematic);
+        w.update(gdt, this.input, !this.inCinematic);
         this.updateDynamicInteractions();
         this.updateMissionFrame(gdt);
         this.markers.update(gdt, w.time, w.focus);
@@ -1283,7 +1313,7 @@ export class Game {
         this.audio.ambient({ beach: THREE.MathUtils.clamp((f.x - 120) / 90, 0, 1), night: w.env.night, city: 1 - THREE.MathUtils.clamp((f.x - 150) / 80, 0, 1) });
       }
       this.world.player.speedMult = this.systems.speedMultiplier();
-      this.systems.update(gdt, this.sysCtx, this.busy || this.director.inCinematic);
+      this.systems.update(gdt, this.sysCtx, this.busy || this.inCinematic);
       this.weather.update(gdt);
       this.cinematic.update(dt); // overrides the gameplay camera while a shot plays
       this.updateHud();

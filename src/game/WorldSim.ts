@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CityBuilder } from '../world/City';
 import { Props } from '../world/Props';
+import { DETAIL_LAYER } from '../world/StreetDetail';
 import { Environment, Quality } from '../world/Environment';
 import { Player } from '../actors/Player';
 import { createRig, type Rig } from '../actors/CharacterModel';
@@ -59,7 +60,9 @@ export class WorldSim {
 
   constructor(renderer: THREE.WebGLRenderer, readonly camera: THREE.PerspectiveCamera, quality: Quality) {
     this.city.build();
-    this.props = new Props(this.city);
+    this.props = new Props(this.city, quality);
+    // street clutter on DETAIL_LAYER is skipped by the water reflection and shadow passes
+    camera.layers.enable(DETAIL_LAYER);
     this.props.build();
     this.scene.add(this.city.group);
     this.env = new Environment(this.scene, renderer, quality);
@@ -67,7 +70,7 @@ export class WorldSim {
     this.player = new Player(this.scene);
     this.rig = new CameraRig(camera, this.city.collision);
     this.peds = new Pedestrians(this.scene, this.city.blocks, this.city.collision, quality === 'low' ? 18 : quality === 'medium' ? 30 : 44);
-    this.traffic = new Traffic(this.scene, this.city.collision, quality === 'low' ? 14 : quality === 'medium' ? 22 : 30);
+    this.traffic = new Traffic(this.scene, this.city.collision, quality === 'low' ? 14 : quality === 'medium' ? 22 : 30, quality);
     for (const p of PARKED) this.spawnVehicle(p.kind as VehicleKind, p.x, p.z, p.yaw);
     const s = PLACES.spawn;
     this.player.place(s.x, s.z, -Math.PI / 2);

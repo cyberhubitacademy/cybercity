@@ -24,9 +24,9 @@ const KEYS: Key[] = [
   { h: 0, sun: '#6f7cff', sunI: 0.35, hemiSky: '#3a2a8a', hemiGround: '#1a0f33', hemiI: 0.55, fog: '#2a1450', fogFar: 520, skyTop: '#05031a', skyHorizon: '#3a1260', cloud: '#2a1d4a', exposure: 0.95, night: 1 },
   { h: 5, sun: '#8b7bff', sunI: 0.4, hemiSky: '#4a3399', hemiGround: '#20123d', hemiI: 0.6, fog: '#3d1f66', fogFar: 520, skyTop: '#0b0a2e', skyHorizon: '#5a2a7a', cloud: '#3a2a5a', exposure: 0.95, night: 0.9 },
   { h: 6.5, sun: '#ff9a6b', sunI: 1.6, hemiSky: '#ffb3c7', hemiGround: '#6b4a5e', hemiI: 0.8, fog: '#ffb1a0', fogFar: 650, skyTop: '#3c6fd8', skyHorizon: '#ffb08a', cloud: '#ffc2a8', exposure: 0.9, night: 0.25 },
-  { h: 8.5, sun: '#fff1d6', sunI: 3.0, hemiSky: '#bfe6ff', hemiGround: '#b59a7a', hemiI: 1.0, fog: '#a8dcff', fogFar: 900, skyTop: '#0f6fe0', skyHorizon: '#9fe2ff', cloud: '#ffffff', exposure: 0.85, night: 0 },
-  { h: 13, sun: '#ffffff', sunI: 3.3, hemiSky: '#c6ecff', hemiGround: '#c2a888', hemiI: 1.0, fog: '#a8e0ff', fogFar: 950, skyTop: '#0a63d8', skyHorizon: '#a6e8ff', cloud: '#ffffff', exposure: 0.85, night: 0 },
-  { h: 16.5, sun: '#ffe2b8', sunI: 2.8, hemiSky: '#ffd0b0', hemiGround: '#b38a70', hemiI: 0.95, fog: '#ffc9b0', fogFar: 850, skyTop: '#2a5fd0', skyHorizon: '#ffd2a8', cloud: '#fff0dc', exposure: 0.85, night: 0 },
+  { h: 8.5, sun: '#ffe9c8', sunI: 3.4, hemiSky: '#9cc4f2', hemiGround: '#8f7b64', hemiI: 0.78, fog: '#c4d8ea', fogFar: 700, skyTop: '#2f78d8', skyHorizon: '#cfe6f7', cloud: '#ffffff', exposure: 0.85, night: 0 },
+  { h: 13, sun: '#fff4e2', sunI: 3.7, hemiSky: '#a4ccf5', hemiGround: '#948068', hemiI: 0.8, fog: '#c8dbea', fogFar: 760, skyTop: '#2a72d6', skyHorizon: '#d2e8f6', cloud: '#ffffff', exposure: 0.85, night: 0 },
+  { h: 16.5, sun: '#ffd9a6', sunI: 3.2, hemiSky: '#a9c3ea', hemiGround: '#8a6f58', hemiI: 0.8, fog: '#e2d6cc', fogFar: 720, skyTop: '#2c62c8', skyHorizon: '#f2dcc2', cloud: '#fff0dc', exposure: 0.85, night: 0 },
   { h: 18.3, sun: '#ffa070', sunI: 1.8, hemiSky: '#ff8fb8', hemiGround: '#7a3d6b', hemiI: 0.9, fog: '#ff8f8a', fogFar: 700, skyTop: '#4b2fa8', skyHorizon: '#ff7a5c', cloud: '#ff9ab0', exposure: 0.9, night: 0.2 },
   { h: 19.5, sun: '#ff3d8a', sunI: 0.9, hemiSky: '#a640c8', hemiGround: '#40205e', hemiI: 0.75, fog: '#8a3a9e', fogFar: 600, skyTop: '#1d0f5a', skyHorizon: '#e0408a', cloud: '#a04a9a', exposure: 0.95, night: 0.65 },
   { h: 21, sun: '#6f7cff', sunI: 0.4, hemiSky: '#3a2a8a', hemiGround: '#1a0f33', hemiI: 0.6, fog: '#2a1450', fogFar: 520, skyTop: '#06041e', skyHorizon: '#3a1260', cloud: '#2a1d4a', exposure: 0.95, night: 1 },
@@ -155,7 +155,9 @@ export class Environment {
     const size = quality === 'ultra' ? 4096 : quality === 'high' ? 4096 : 2048;
     this.sun.shadow.mapSize.set(size, size);
     const cam = this.sun.shadow.camera;
-    const ext = quality === 'ultra' ? 110 : 85;
+    // Tighter shadow box = crisper, sharper-edged sun shadows near the player (the reference look);
+    // distance haze hides where they end.
+    const ext = quality === 'ultra' ? 90 : quality === 'high' ? 72 : 60;
     cam.left = -ext; cam.right = ext; cam.top = ext; cam.bottom = -ext;
     cam.near = 1; cam.far = 600;
     this.sun.shadow.bias = -0.0004;
@@ -239,7 +241,7 @@ export class Environment {
     const fog = this.scene.fog as THREE.Fog;
     lerpColor(a.fog, b.fog, t, fog.color);
     fog.far = L(a.fogFar, b.fogFar);
-    fog.near = fog.far * 0.18;
+    fog.near = fog.far * 0.12; // aerial perspective: distant towers fade into a pale haze
     this.exposure = L(a.exposure, b.exposure);
 
     // Shadow camera follows the focus point, snapped to texels to avoid shimmering.

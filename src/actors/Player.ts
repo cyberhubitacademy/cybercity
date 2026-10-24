@@ -30,8 +30,15 @@ export interface PlayerMotor {
 const PIVOT_Y = 0.95;
 const _pivot = new THREE.Vector3();
 
+export type RigListener = (next: Rig, prev: Rig) => void;
+
 export class Player {
-  readonly rig: Rig = createRig(RICO_OUTFIT);
+  /** The visible body. Swapped by `setRig` (character switching), so never cache it across frames. */
+  get rig(): Rig { return this._rig; }
+  private _rig: Rig = createRig(RICO_OUTFIT, { separateParts: true });
+  /** Children the current rig's body came with; anything else was attached by a system (parachute pack...). */
+  private nativeParts = new Set<THREE.Object3D>();
+  private rigListeners: RigListener[] = [];
   readonly position = new THREE.Vector3();
   yaw = 0;
   vy = 0;
@@ -64,6 +71,41 @@ export class Player {
 
   constructor(scene: THREE.Scene) {
     scene.add(this.rig.root);
+    for (const c of this._rig.body.children) this.nativeParts.add(c);
+  }
+
+  /**
+   * Swap the visible body (character switching). The new rig takes the old one's place in the
+   * scene graph at the same position/yaw; objects other systems parented to the old body (gear)
+   * move across. Returns the previous rig (removed from the scene). Keep player rigs created
+   * with `{ separateParts: true }` so shops can recolour them by material name.
+   */
+  setRig(next: Rig): Rig {
+    const prev = this._rig;
+    if (next === prev) return prev;
+    const parent = prev.root.parent;
+    const native = new Set<THREE.Object3D>(next.body.children);
+    for (let i = prev.body.children.length - 1; i >= 0; i--) {
+      const c = prev.body.children[i];
+      if (!this.nativeParts.has(c)) next.body.add(c);
+    }
+    prev.root.removeFromParent();
+    prev.setPose('none');
+    parent?.add(next.root);
+    next.root.quaternion.identity();
+    this._rig = next;
+    this.nativeParts = native;
+    this.sync();
+    for (const fn of this.rigListeners) {
+      try { fn(next, prev); } catch (err) { console.error('[player] rig listener failed', err); }
+    }
+    return prev;
+  }
+
+  /** Be told when `setRig` swaps the body (re-resolve bones, re-attach props). Returns an unsubscribe. */
+  onRigChanged(fn: RigListener): () => void {
+    this.rigListeners.push(fn);
+    return () => { this.rigListeners = this.rigListeners.filter((f) => f !== fn); };
   }
 
   place(x: number, z: number, yaw = this.yaw, y = 0): void {

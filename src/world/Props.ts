@@ -3,6 +3,8 @@ import { BEACH_X, HARBOR_Z, ROADS_X, ROADS_Z, ROAD_WIDTH, SHORE_X, buildBlocks, 
 import { CityBuilder } from './City';
 import { glowSprite } from './textures';
 import { pbr } from './City';
+import type { Quality } from './Environment';
+import { buildStreetDetail } from './StreetDetail';
 
 // Instanced street furniture and the beach/pier. Everything repeated many times
 // is an InstancedMesh so the city stays at a few hundred draw calls.
@@ -77,7 +79,7 @@ export class Props {
   private crowns?: THREE.InstancedMesh;
   private palmMatrices: THREE.Matrix4[] = [];
 
-  constructor(private city: CityBuilder) {}
+  constructor(private city: CityBuilder, private quality: Quality = 'high') {}
 
   build(): void {
     this.roadMarkings();
@@ -86,6 +88,7 @@ export class Props {
     this.beach();
     this.pier();
     this.foliage();
+    buildStreetDetail(this.city, this.quality);
   }
 
   /** Dense tropical shrubs and flowering bougainvillea along sidewalks and lawns. */
@@ -225,17 +228,23 @@ export class Props {
     const t = new THREE.InstancedMesh(trunk, trunkMat, n);
     const c = new THREE.InstancedMesh(crown, crownMat, n);
     const k = new THREE.InstancedMesh(coconuts, nutMat, n);
+    // separate stream so the variety below doesn't shift the rest of the props' layout
+    const vary = mulberry32(4242);
+    const lift = new THREE.Matrix4();
     keep.forEach(([x, z], i) => {
       const s = 0.8 + rnd() * 0.55;
-      const m = new THREE.Matrix4().compose(
-        new THREE.Vector3(x, 0, z),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rnd() * Math.PI * 2, 0)),
-        new THREE.Vector3(s, s * (0.9 + rnd() * 0.35), s),
-      );
+      const yaw = rnd() * Math.PI * 2;
+      // 0.7x-1.5x height (on top of the original jitter) plus a gentle lean
+      const hs = (0.9 + rnd() * 0.35) * (0.7 + vary() * 0.8);
+      const rot = new THREE.Quaternion().setFromEuler(new THREE.Euler((vary() - 0.5) * 0.16, yaw, (vary() - 0.5) * 0.16, 'YXZ'));
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), rot, new THREE.Vector3(s, s * hs, s));
+      // crown and coconuts keep their shape: uniform scale, lifted to the stretched trunk top
+      const cm = new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), rot, new THREE.Vector3(s, s, s));
+      cm.multiply(lift.makeTranslation(0, 9 * (hs - 1), 0));
       t.setMatrixAt(i, m);
-      c.setMatrixAt(i, m);
-      k.setMatrixAt(i, m);
-      this.palmMatrices.push(m);
+      c.setMatrixAt(i, cm);
+      k.setMatrixAt(i, cm);
+      this.palmMatrices.push(cm);
       this.city.collision.add({ x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35, y0: 0, y1: 6 });
     });
     for (const m of [t, c, k]) { m.castShadow = true; m.receiveShadow = true; }
@@ -258,6 +267,7 @@ export class Props {
     const add = (x: number, z: number, yaw: number) => {
       const m = new THREE.Matrix4().makeRotationY(yaw).setPosition(x, 0, z);
       mats.push(m);
+      this.city.collision.addRect(x - 0.16, z - 0.16, x + 0.16, z + 0.16, 7.5);
       const hp = new THREE.Vector3(2.0, 7.2, 0).applyMatrix4(m);
       this.lampHeads.push(hp);
     };

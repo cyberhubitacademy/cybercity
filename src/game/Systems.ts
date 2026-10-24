@@ -39,6 +39,8 @@ export interface SystemContext {
   setData(systemId: string, value: unknown): void;
   /** Other systems by id (for cooperation, e.g. combat asks police for wanted level). */
   system<T extends GameSystem>(id: string): T | undefined;
+  /** True while a story mission is accepted / its script is running (optional: absent in tests). */
+  missionActive?(): boolean;
 }
 
 export interface GameSystem {
@@ -51,6 +53,13 @@ export interface GameSystem {
   always?(dt: number, ctx: SystemContext): void;
   /** Movement speed multiplier this system wants applied to the player (1 = none). */
   speedMultiplier?(): number;
+  /** Game-time scale this system wants (slow motion, < 1). The slowest request wins. */
+  timeScale?(): number;
+  /**
+   * True while this system plays its own cinematic (it owns the camera from `always()`):
+   * the game then treats itself as busy (no gameplay input, other systems' update() paused).
+   */
+  cinematic?(): boolean;
   dispose?(): void;
 }
 
@@ -89,6 +98,22 @@ export class SystemRegistry {
         console.error(`[system ${s.id}] update failed`, err);
       }
     }
+  }
+
+  /** Slowest game-time scale any system asks for (1 = normal). */
+  timeScale(): number {
+    let m = 1;
+    for (const s of this.systems) {
+      const k = s.timeScale?.() ?? 1;
+      if (k < m) m = k;
+    }
+    return m;
+  }
+
+  /** True while any system's own cinematic owns the camera. */
+  inCinematic(): boolean {
+    for (const s of this.systems) if (s.cinematic?.()) return true;
+    return false;
   }
 
   speedMultiplier(): number {

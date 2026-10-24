@@ -38,6 +38,8 @@ export interface FacadeMaps {
   map: THREE.Texture;
   emissive: THREE.Texture;
   roughness: THREE.Texture;
+  /** Window panes metallic (mirror the sky and street), walls not. */
+  metalness: THREE.Texture;
   /** World size in meters that one texture tile covers (width, height). */
   tile: [number, number];
 }
@@ -159,7 +161,16 @@ export function facade(kind: FacadeKind, seed = 1): FacadeMaps {
     }
     const tileW = kind === 'glass' ? 18 : kind === 'warehouse' ? 16 : 14;
     const tileH = kind === 'glass' ? 18 : kind === 'warehouse' ? 12 : 14;
-    return { map: finish(c), emissive: finish(ce), roughness: finish(cr, false), tile: [tileW, tileH] };
+    // Metalness from the roughness layout: smooth panes become reflective glass.
+    const [cm, gm] = canvas(S, S);
+    const px = gr.getImageData(0, 0, S, S);
+    const d = px.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const metal = d[i + 1] < 0x60 ? (kind === 'glass' ? 230 : 190) : kind === 'datacenter' ? 60 : 0;
+      d[i] = d[i + 1] = d[i + 2] = metal;
+    }
+    gm.putImageData(px, 0, 0);
+    return { map: finish(c), emissive: finish(ce), roughness: finish(cr, false), metalness: finish(cm, false), tile: [tileW, tileH] };
   })();
   facadeCache.set(key, made);
   return made;

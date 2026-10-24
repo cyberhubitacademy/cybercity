@@ -66,6 +66,7 @@ Types: `npx tsc --noEmit` (must stay clean for YOUR files; ignore others' in-pro
 | P phone | life |
 | N nitro, L headlights, K vehicle menu (doors/trunk/hood) | vehicles |
 | Right mouse aim (block with melee), Left mouse shoot/punch, Q tap = take/leave cover, Q hold = weapon wheel, 1–5 weapon slots, X holster, Z Focus (slow-mo aim), B shoulder swap; E context: takedown / disarm / human shield / zip-tie / search body | combat |
+| Left Alt hold = character wheel (Rico / Maya), F5 = switch to Rico, F6 = switch to Maya (keys preventDefault'ed while playing) | switching |
 
 ## Quality bar
 - GTA V/VI feel: responsive controls, smooth blends, camera feel, satisfying feedback (sounds, shakes, UI pops).

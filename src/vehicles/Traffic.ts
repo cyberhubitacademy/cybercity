@@ -3,6 +3,8 @@ import { LANE_OFFSET, RoadNode, buildRoadGraph } from '../world/layout';
 import type { CollisionWorld } from '../world/Collision';
 import { VEHICLE_DEFS, Vehicle, VehicleKind } from './Vehicle';
 import { impactDamage, wrapAngle } from './physics';
+import { ContactShadows } from './contactShadows';
+import { setVehicleQuality, type VehicleQuality } from './materials';
 
 // Ambient traffic: AI drivers follow right-hand lanes along the road graph,
 // choose random turns at intersections, and slow for obstacles ahead.
@@ -42,8 +44,18 @@ export class Traffic {
   /** Extra positions AI drivers brake for (e.g. the tram). Owned by other systems. */
   readonly extraObstacles: THREE.Vector3[] = [];
   private rnd = Math.random;
+  /** Blob shadows under every vehicle (one draw call) + far-car shadow LOD. */
+  readonly contactShadows: ContactShadows;
 
-  constructor(private scene: THREE.Scene, private world: CollisionWorld, private poolSize = 22) {}
+  /**
+   * `quality` picks the car paint shader; when omitted it is inferred from the
+   * pool size WorldSim derives from the quality setting (14 / 22 / 30).
+   * Constructed before any car is built, so every car gets the right materials.
+   */
+  constructor(private scene: THREE.Scene, private world: CollisionWorld, private poolSize = 22, quality?: VehicleQuality) {
+    setVehicleQuality(quality ?? (poolSize <= 14 ? 'low' : poolSize <= 22 ? 'medium' : 'high'));
+    this.contactShadows = new ContactShadows(scene);
+  }
 
   /** Lane point: node position offset to the right of the travel direction. */
   private lanePoint(a: RoadNode, b: RoadNode, atB: boolean): THREE.Vector3 {
@@ -216,6 +228,11 @@ export class Traffic {
    * Returns nothing; drives each AI vehicle's controls and integrates physics.
    */
   update(dt: number, center: THREE.Vector3, obstacles: THREE.Vector3[], allVehicles: Vehicle[]): void {
+    this.updateAi(dt, center, obstacles, allVehicles);
+    this.contactShadows.update(allVehicles, center);
+  }
+
+  private updateAi(dt: number, center: THREE.Vector3, obstacles: THREE.Vector3[], allVehicles: Vehicle[]): void {
     for (const [v, r] of this.racers) if (v.driver === 'ai') this.updateRacer(v, r, dt, allVehicles);
     for (const [v, s] of this.ai) {
       if (v.driver !== 'ai') continue;

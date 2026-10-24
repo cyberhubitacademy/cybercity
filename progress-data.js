@@ -1,7 +1,7 @@
 // Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
 window.PROGRESS = {
-  updated: '24/10/2026 15:43:34',
-  now: 'Playtest round 2: helicopter OK (spool-up then climbs 36->93 m), elevator OK. BUG found: firefight shots fire but don\'t register hits (aim/hit detection). Fixing next, plus verify weapon cameras (aim cam, scope, kill cam)',
+  updated: '24/10/2026 17:16:45',
+  now: 'Realism pass (natural light, haze, street detail, glossy cars, reflective windows), 2x faster on laptops, Rico/Maya character switching',
   tasks: [
     { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
     { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },

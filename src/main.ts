@@ -1,3 +1,4 @@
+import './mute'; // must stay first: ?mute=1 silences everything before audio code loads
 import './styles.css';
 import { Game } from './game/Game';
 import { ASSETS } from './assets/Assets';

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { ASSETS, type PersonModel } from '../../assets/Assets';
 import { Humanoid } from '../../actors/Humanoid';
+import { mergeIntoPalette } from '../../actors/CharacterModel';
 import { findBones, poseAim, poseCrouch, poseFlinch, poseHandsUp, posePunch, poseKick, poseSwing, poseBlock, type BoneSet } from './bones';
 
 // Combat character: a skinned Quaternius model with its own mixer so enemies,
@@ -79,7 +80,8 @@ export class CombatActor {
           pants: outfit.pants, skin: outfit.skin, hair: outfit.hair, hairbase: outfit.hair, eyebrows: outfit.hair,
           shoes: outfit.shoes ?? '#1b1b22', socks: '#222222',
         };
-        obj.traverse((o) => {
+        // one draw call per enemy (same merge as pedestrians); separate parts only as a fallback
+        if (!mergeIntoPalette(model, src.scene, obj, colors)) obj.traverse((o) => {
           const mesh = o as THREE.SkinnedMesh;
           if (!mesh.isMesh) return;
           mesh.castShadow = true;

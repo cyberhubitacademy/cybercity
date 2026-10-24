@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { sand } from '../../world/textures';
-import { mulberry32 } from '../../world/layout';
+import { HARBOR_Z, mulberry32, SHORE_X } from '../../world/layout';
 import type { Quality } from '../../world/Environment';
 import { WATER_Y, terrainHeight } from './physics';
 import { FISH_COUNTS, stepSchool, type FishAgent, type School } from './fish';
@@ -633,6 +633,9 @@ export class Underwater {
     this.uCaustic.value = 0.12 + day * Math.min(1, env.sun.intensity / 2.5) * 0.65;
     const cam = camera.position;
     this.underwater = cam.y < WATER_Y;
+    // The seabed, reef and fish sit under opaque water: only draw them near the coast or when diving.
+    const nearSea = cam.x > SHORE_X - 45 || cam.z > HARBOR_Z - 45;
+    this.group.visible = this.underwater || swimmerNear || (nearSea && cam.y < 40);
 
     if (this.underwater && fog) {
       const depth = WATER_Y - cam.y;
