@@ -498,7 +498,7 @@ export class Game {
     const pos = this.world.player.position;
     p.position = { x: pos.x, z: pos.z, yaw: this.world.player.yaw };
     if (this.world.vehicle) p.position = { x: this.world.vehicle.position.x, z: this.world.vehicle.position.z, yaw: this.world.vehicle.yaw };
-    if (this.world.vehicle?.def.kind === 'boat') p.position = { ...PLACES.spawn, yaw: 0 };
+    if (this.world.vehicle && ['boat', 'jetski', 'kayak', 'airboat', 'heli'].includes(this.world.vehicle.def.kind)) p.position = { ...PLACES.spawn, yaw: 0 };
     p.hour = this.world.hour;
     p.health = this.world.player.health;
     p.missions = this.missions.serialize();
@@ -1276,7 +1276,7 @@ export class Game {
         if (this.lastSubtitle > 0) { this.lastSubtitle -= dt; if (this.lastSubtitle <= 0) this.ui.subtitle(null, null); }
         // audio: engine + ambience
         const v = w.vehicle;
-        this.audio.engine(!!v && v.def.kind !== 'boat' ? true : !!v, v ? Math.min(1, Math.abs(v.speed) / v.def.maxSpeed) : 0);
+        this.audio.engine(!!v && !(v.def as { pedal?: boolean }).pedal, v ? Math.min(1, Math.abs(v.speed) / v.def.maxSpeed) : 0);
         const f = w.focus;
         this.audio.ambient({ beach: THREE.MathUtils.clamp((f.x - 120) / 90, 0, 1), night: w.env.night, city: 1 - THREE.MathUtils.clamp((f.x - 150) / 80, 0, 1) });
       }

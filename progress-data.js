@@ -1,7 +1,7 @@
 // Updated by Claude as work lands. progress.html re-reads this file every 5 seconds.
 window.PROGRESS = {
-  updated: '24/10/2026 15:23:56',
-  now: 'Vehicles helper finishing (suspension, jet ski, kayak, airboat, helicopter, garage, races, tram, taxi). Then full playtest + ZIP',
+  updated: '24/10/2026 15:29:57',
+  now: 'All systems built and live. Remaining: hands-on playtest of everything + polish',
   tasks: [
     { group: 'Foundation', name: 'Project scaffold (Vite + TypeScript + Three.js)', weight: 3, done: 100 },
     { group: 'Foundation', name: 'Shared challenge contract + neon UI style kit', weight: 3, done: 100 },
@@ -9,7 +9,7 @@ window.PROGRESS = {
     { group: 'World', name: 'Buildings, palms, beach, ocean, pier + Ferris wheel', weight: 10, done: 100 },
     { group: 'World', name: 'Realistic sky, reflective ocean, shadows, AO, bloom, color grading (GTA-style look)', weight: 8, done: 90 },
     { group: 'Gameplay', name: 'Player character, controls, camera, collision', weight: 7, done: 95 },
-    { group: 'Gameplay', name: 'Drivable cars, boat, traffic AI, radio', weight: 8, done: 85 },
+    { group: 'Gameplay', name: 'Drivable cars, boat, traffic AI, radio', weight: 8, done: 95 },
     { group: 'Gameplay', name: 'Pedestrians + mission-giver characters', weight: 5, done: 90 },
     { group: 'Story', name: 'Mission system + 9 story missions + side missions', weight: 8, done: 100 },
     { group: 'Story', name: 'Dialogue, cutscene text, Hot Pursuit van chase', weight: 5, done: 100 },
@@ -27,7 +27,7 @@ window.PROGRESS = {
     { group: 'Story', name: 'SCM-style mission language: compiler, bytecode, verifier, VM, 12 scripted missions', weight: 8, done: 100 },
     { group: 'Release', name: 'GitHub repo "cybercity" + GitHub Pages hosting', weight: 2, done: 100 },
     { group: 'GTA 6 upgrade', name: 'Real 3D animated characters (CC0)', weight: 6, done: 85 },
-    { group: 'GTA 6 upgrade', name: 'Real 3D cars + GTA-style driving feel', weight: 6, done: 75 },
+    { group: 'GTA 6 upgrade', name: 'Real 3D cars + GTA-style driving feel', weight: 6, done: 90 },
     { group: 'GTA 6 upgrade', name: 'PBR roads/sidewalks/sand + HDR sky lighting', weight: 4, done: 85 },
     { group: 'GTA 6 upgrade', name: 'GTA 6-style HUD, minimap, mission screens', weight: 4, done: 90 },
     { group: 'GTA 6 upgrade', name: 'Easy instructions: interactive tutorial + how-to cards', weight: 4, done: 75 },
@@ -36,12 +36,12 @@ window.PROGRESS = {
     { group: 'Season 2', name: 'Cinematic cutscenes + epic adaptive mission music', weight: 6, done: 85 },
     { group: 'Season 2', name: 'Piper voices for all new dialogue', weight: 2, done: 100 },
     { group: 'Quality', name: 'Fix narration voice in all browsers', weight: 2, done: 60 },
-    { group: 'GTA life', name: 'Movement: crouch, climb, vault, swim, dive, scuba, breath, parachute, ragdoll', weight: 8, done: 90 },
-    { group: 'GTA life', name: 'Vehicles: suspension, damage, jet ski, kayak, airboat, bikes, helicopter, garage, tuning, races, tram, taxi', weight: 10, done: 5 },
+    { group: 'GTA life', name: 'Movement: crouch, climb, vault, swim, dive, scuba, breath, parachute, ragdoll', weight: 8, done: 95 },
+    { group: 'GTA life', name: 'Vehicles: suspension, damage, jet ski, kayak, airboat, bikes, helicopter, garage, tuning, races, tram, taxi', weight: 10, done: 90 },
     { group: 'GTA life', name: 'Life sim: stats, gym, food, sleep, safehouse, shops, barber, tattoos, phone, social feed, camera', weight: 10, done: 90 },
     { group: 'GTA life', name: 'Activities + animals: fishing, basketball, pool, mini-golf, nightclub, dating, dogs, birds, alligators', weight: 8, done: 90 },
     { group: 'GTA life', name: 'Combat: weapons, aiming, cover, melee, takedowns, Focus slow-mo, weapon wheel', weight: 10, done: 90 },
     { group: 'GTA life', name: 'Crime + police: wanted level, witnesses, evasion, robberies, carjacking, fences, stash', weight: 8, done: 90 },
-    { group: 'GTA life', name: 'GTA 6 graphics pass: Leonida grade, sun flares, turquoise water + foam, dense foliage, crowds, building detail, cinematic DOF', weight: 6, done: 45 },
+    { group: 'GTA life', name: 'GTA 6 graphics pass: Leonida grade, sun flares, turquoise water + foam, dense foliage, crowds, building detail, cinematic DOF', weight: 6, done: 70 },
   ],
 };

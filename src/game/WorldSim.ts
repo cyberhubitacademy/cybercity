@@ -221,12 +221,14 @@ export class WorldSim {
     v.controls = { throttle: 0, steer: 0, handbrake: true };
     const side = new THREE.Vector3(Math.cos(v.yaw), 0, -Math.sin(v.yaw)); // driver's left
     const exit = v.position.clone().addScaledVector(side, v.def.width / 2 + 0.9);
-    if (v.def.kind === 'boat') {
+    const waterCraft = ['boat', 'jetski', 'kayak', 'airboat'].includes(v.def.kind);
+    if (waterCraft) {
       // step off onto the nearest pier/shore point
       exit.set(Math.min(exit.x, 236), 0, Math.min(exit.z, 210));
     }
-    if (at && v.def.kind !== 'boat') exit.copy(at);
-    this.player.place(exit.x, exit.z, v.yaw);
+    if (at && !waterCraft) exit.copy(at);
+    // bailing out of a helicopter keeps the altitude (skydiving)
+    this.player.place(exit.x, exit.z, v.yaw, v.def.kind === 'heli' ? v.position.y : 0);
     this.player.active = true;
     this.vehicle = null;
     this.events.onExitVehicle?.(v);

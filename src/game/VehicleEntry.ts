@@ -70,7 +70,8 @@ export class VehicleEntry {
   seatLocal(v: Vehicle): THREE.Vector3 {
     if (v.def.kind === 'bike') return new THREE.Vector3(0, 0.55, -0.25);
     if (v.def.kind === 'boat') return new THREE.Vector3(0, 0.75, -0.9);
-    return new THREE.Vector3(v.def.width * 0.2, Math.max(0.15, v.height * 0.12), -v.def.length * 0.06);
+    // low enough that the seated driver's head stays under the roof
+    return new THREE.Vector3(v.def.width * 0.2, Math.max(-0.12, v.height * 0.12 - 0.32), -v.def.length * 0.06);
   }
 
   doorLocal(v: Vehicle): THREE.Vector3 {
