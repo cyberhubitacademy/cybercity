@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LANE_OFFSET, RoadNode, buildRoadGraph } from '../world/layout';
 import type { CollisionWorld } from '../world/Collision';
 import { VEHICLE_DEFS, Vehicle, VehicleKind } from './Vehicle';
+import { impactDamage, wrapAngle } from './physics';
 
 // Ambient traffic: AI drivers follow right-hand lanes along the road graph,
 // choose random turns at intersections, and slow for obstacles ahead.
@@ -19,12 +20,27 @@ interface AiState {
   scripted?: boolean;
 }
 
+/** AI race opponent following a checkpoint path (racing line + rubber band via speedMult). */
+interface RacerState {
+  path: { x: number; z: number }[];
+  idx: number;
+  loop: boolean;
+  /** 0.8..1.1: fraction of top speed on straights. */
+  skill: number;
+  stuck: number;
+  reverse: number;
+  finished: boolean;
+}
+
 const TRAFFIC_KINDS: VehicleKind[] = ['sedan', 'sedan', 'sedan', 'taxi', 'cabrio', 'stinger', 'sedan', 'bike', 'cabrio'];
 
 export class Traffic {
   readonly nodes = buildRoadGraph();
   readonly cars: Vehicle[] = [];
   private ai = new Map<Vehicle, AiState>();
+  private racers = new Map<Vehicle, RacerState>();
+  /** Extra positions AI drivers brake for (e.g. the tram). Owned by other systems. */
+  readonly extraObstacles: THREE.Vector3[] = [];
   private rnd = Math.random;
 
   constructor(private scene: THREE.Scene, private world: CollisionWorld, private poolSize = 22) {}
@@ -62,6 +78,7 @@ export class Traffic {
       if (d < minD || d > maxD) continue;
       if (this.cars.some((c) => c !== v && c.position.distanceTo(p) < 9)) continue;
       v.place(p.x, p.z, Math.atan2(b.x - a.x, b.z - a.z));
+      v.repair();
       v.velocity.copy(v.forward).multiplyScalar(8);
       this.ai.set(v, { from: a, to: b, cruise: 10 + this.rnd() * 5, stuck: 0 });
       return;
@@ -82,12 +99,105 @@ export class Traffic {
 
   release(v: Vehicle): void {
     this.ai.delete(v);
+    this.racers.delete(v);
     const i = this.cars.indexOf(v);
     if (i >= 0) this.cars.splice(i, 1);
   }
 
   isAi(v: Vehicle): boolean {
-    return this.ai.has(v);
+    return this.ai.has(v) || this.racers.has(v);
+  }
+
+  /**
+   * Carjacking support: stop an AI car, take it out of AI control and return
+   * where its driver should appear (driver's door), or null if not an AI car.
+   * The vehicle leaves `cars`; pass `keepIn` (e.g. world.vehicles) so the world
+   * keeps simulating it as a parked/enterable vehicle.
+   */
+  ejectDriver(v: Vehicle, keepIn?: Vehicle[]): { x: number; z: number } | null {
+    if (!this.isAi(v)) return null;
+    v.velocity.multiplyScalar(0.1);
+    v.speed *= 0.1;
+    v.controls = { throttle: 0, steer: 0, handbrake: true };
+    this.release(v);
+    v.driver = null;
+    if (keepIn && !keepIn.includes(v)) keepIn.push(v);
+    const off = v.def.width / 2 + 0.9;
+    return { x: v.position.x + Math.cos(v.yaw) * off, z: v.position.z - Math.sin(v.yaw) * off };
+  }
+
+  /** Turn a vehicle into an AI race opponent following `path` (checkpoints). */
+  addRacer(v: Vehicle, path: { x: number; z: number }[], loop: boolean, skill = 1): void {
+    this.ai.delete(v);
+    v.driver = 'ai';
+    this.racers.set(v, { path, idx: 0, loop, skill, stuck: 0, reverse: 0, finished: false });
+    if (!this.cars.includes(v)) this.cars.push(v);
+  }
+
+  removeRacer(v: Vehicle): void {
+    this.racers.delete(v);
+    const i = this.cars.indexOf(v);
+    if (i >= 0) this.cars.splice(i, 1);
+    if (v.driver === 'ai') v.driver = null;
+  }
+
+  isRacer(v: Vehicle): boolean {
+    return this.racers.has(v);
+  }
+
+  /** Stop a racer at the finish (it brakes and idles). */
+  finishRacer(v: Vehicle): void {
+    const r = this.racers.get(v);
+    if (r) r.finished = true;
+  }
+
+  private updateRacer(v: Vehicle, r: RacerState, dt: number, allVehicles: Vehicle[]): void {
+    const n = r.path.length;
+    if (!n) return;
+    const tgt = r.path[Math.min(r.idx, n - 1)];
+    const nextI = r.loop ? (r.idx + 1) % n : Math.min(r.idx + 1, n - 1);
+    const next = r.path[nextI];
+    const prev = r.path[r.loop ? (r.idx - 1 + n) % n : Math.max(0, r.idx - 1)];
+    const dx = tgt.x - v.position.x, dz = tgt.z - v.position.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 11 && !r.finished) {
+      r.idx++;
+      if (r.loop) r.idx %= n;
+      else if (r.idx >= n) { r.finished = true; r.idx = n - 1; }
+    }
+    // racing line: start turning toward the following checkpoint before reaching this one
+    const blend = Math.max(0, Math.min(0.55, (28 - d) / 28));
+    let ax = tgt.x + (next.x - tgt.x) * blend, az = tgt.z + (next.z - tgt.z) * blend;
+    // overtake: shift aim sideways if a car is right ahead
+    const fx = Math.sin(v.yaw), fz = Math.cos(v.yaw);
+    for (const o of allVehicles) {
+      if (o === v) continue;
+      const ox = o.position.x - v.position.x, oz = o.position.z - v.position.z;
+      const ahead = ox * fx + oz * fz;
+      if (ahead < 0 || ahead > 11) continue;
+      const lateral = ox * fz - oz * fx;
+      if (Math.abs(lateral) < 2.4) { ax += fz * (lateral > 0 ? 3 : -3); az -= fx * (lateral > 0 ? 3 : -3); }
+    }
+    const diff = wrapAngle(Math.atan2(ax - v.position.x, az - v.position.z) - v.yaw);
+    v.controls.steer = Math.max(-1, Math.min(1, diff * 2.6));
+    // corner speed from the turn angle at the target checkpoint
+    const inA = Math.atan2(tgt.x - prev.x, tgt.z - prev.z), outA = Math.atan2(next.x - tgt.x, next.z - tgt.z);
+    const corner = Math.abs(wrapAngle(outA - inA));
+    const top = v.def.maxSpeed * r.skill;
+    const cornerV = Math.max(12, top * (1 - (corner / Math.PI) * 1.25));
+    const spd = v.speed;
+    const brakeDist = Math.max(0, (spd * spd - cornerV * cornerV) / (2 * 16));
+    let target = d < brakeDist + 10 ? cornerV : top;
+    target *= 1 - Math.min(0.5, Math.abs(diff) * 0.35);
+    if (r.finished) target = 0;
+    v.controls.handbrake = false;
+    v.controls.throttle = spd < target - 0.5 ? 1 : spd > target + 2 ? -1 : 0.25;
+    if (r.finished && Math.abs(spd) < 1) v.controls.throttle = 0;
+    // unstick
+    if (!r.finished && Math.abs(spd) < 1) r.stuck += dt; else r.stuck = 0;
+    if (r.stuck > 2) { r.reverse = 1.2; r.stuck = 0; }
+    if (r.reverse > 0) { r.reverse -= dt; v.controls.throttle = -1; v.controls.steer = -v.controls.steer; }
+    v.update(dt, this.world);
   }
 
   private nextNode(s: AiState): RoadNode {
@@ -106,6 +216,7 @@ export class Traffic {
    * Returns nothing; drives each AI vehicle's controls and integrates physics.
    */
   update(dt: number, center: THREE.Vector3, obstacles: THREE.Vector3[], allVehicles: Vehicle[]): void {
+    for (const [v, r] of this.racers) if (v.driver === 'ai') this.updateRacer(v, r, dt, allVehicles);
     for (const [v, s] of this.ai) {
       if (v.driver !== 'ai') continue;
       // recycle far-away ambient cars toward the player
@@ -142,6 +253,7 @@ export class Traffic {
         if (lateral < 2.2) blocked = Math.min(blocked, ahead);
       };
       for (const p of obstacles) check(p);
+      for (const p of this.extraObstacles) check(p);
       for (const o of allVehicles) if (o !== v) check(o.position);
 
       let target = s.cruise * (1 - Math.min(0.55, Math.abs(diff)));
@@ -183,6 +295,13 @@ export function separateVehicles(list: Vehicle[], onHit?: (a: Vehicle, b: Vehicl
         a.velocity.x += nx * rel * 0.6; a.velocity.z += nz * rel * 0.6;
         b.velocity.x -= nx * rel * 0.6; b.velocity.z -= nz * rel * 0.6;
         onHit?.(a, b, -rel);
+        if (-rel > 3) {
+          const hx = (a.position.x + b.position.x) / 2, hz = (a.position.z + b.position.z) / 2;
+          a.damage(impactDamage(-rel * 0.75, a.stats.armor), hx, hz);
+          b.damage(impactDamage(-rel * 0.75, b.stats.armor), hx, hz);
+          a.dent(hx, a.position.y + 0.7, hz, impactDamage(-rel, a.stats.armor) * 0.001);
+          b.dent(hx, b.position.y + 0.7, hz, impactDamage(-rel, b.stats.armor) * 0.001);
+        }
       }
       a.sync(0);
       b.sync(0);

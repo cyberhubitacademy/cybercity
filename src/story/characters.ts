@@ -453,3 +453,103 @@ export const SCRIPT_LINES: Record<string, DialogueLine[]> = {
     { speaker: 'narrator', text: 'THE END of Season 2. Neon Bay is yours to explore. Side missions, the Cyber Lab and the Cyber Arcade are waiting.' },
   ],
 };
+
+// ---------------------------------------------------------------- Season 3: Physical Threats
+
+CHARACTERS.reyes = {
+  id: 'reyes',
+  name: 'Sgt. Dana Reyes',
+  role: 'Neon Bay PD, Central Precinct',
+  portraitColor: '#5aa9e6',
+  outfit: { shirt: '#24365e', pants: '#1b2238', skin: '#b07a52', hair: '#1b120d', shirtPattern: 'plain' },
+  bio: 'Twenty-two years on patrol, eleven as the precinct\'s crisis negotiator. Believes most bad days end fine if somebody keeps their voice down.',
+  greeting: ['Sunset Shield. Keep your hands where my officers can see them and we\'ll get along fine.'],
+  idle: ['Slow is smooth, smooth is fast.', 'Paperwork is how we prove we did it right.', 'Carry your authorization letter. Every time.'],
+};
+
+CHARACTERS.ortiz = {
+  id: 'ortiz',
+  name: 'Lupe Ortiz',
+  role: 'Owner, Neon 24/7 on Ocean Drive',
+  portraitColor: '#19e6ff',
+  outfit: { shirt: '#ff2fa0', pants: '#2b3a55', skin: '#b07a52', hair: '#4a2c1a', shirtPattern: 'plain' },
+  bio: 'Has run the corner store for thirty years. Trains every new clerk herself. Wants proof the silent alarm works before she needs it.',
+  greeting: ['Rico! You want a mango soda? On the house. Security people get thirsty.'],
+  idle: ['The register never argues. Give them the money, stay alive.', 'Cameras over the door, not over the register. Faces matter.'],
+};
+
+Object.assign(SCRIPT_LINES, {
+  s3e1_spotted: [
+    { speaker: 'rico', text: 'There. Gray hoodie. He waits by the door, Toby badges in, and he walks in right behind him. Classic tailgating.' },
+    { speaker: 'marisol', text: 'And at 9:40 his own "badge" opens the vault floor. Toby\'s ID, a stranger\'s face.' },
+    { speaker: 'rico', text: 'So he did both. Cloned the badge in the elevator, then tailgated to be safe. He\'s still in the building. He just saw me look up.' },
+  ],
+  s3e1_badge: [
+    { speaker: 'rico', text: 'Got a card reader in his jacket. Reads a cheap 125 kilohertz badge from a few centimeters away. In the elevator, that\'s enough.' },
+    { speaker: 'marisol', text: 'So our badges are basically paper with a magnet.' },
+    { speaker: 'rico', text: 'Old proximity badges, yes. Encrypted smart badges plus a PIN on sensitive doors fix most of this. And people who hold the door shut, not open.' },
+  ],
+  s3e2_howto: [
+    { speaker: 'dex', text: 'A skimmer is a fake card slot glued over the real one. A tiny camera or a fake keypad grabs the PIN.' },
+    { speaker: 'dex', text: 'Shimmers are worse: a thin board inside the slot that reads chip cards. Look for loose parts, glue, an odd camera hole. Press E to pull it.' },
+  ],
+  s3e2_skimmer: [
+    { speaker: 'rico', text: 'Six skimmers. Bluetooth modules on all of them. That courier was going to walk past each ATM and download everything.' },
+    { speaker: 'dex', text: 'The bank is adding tamper seals and daily terminal checks. And telling customers to tap instead of insert.' },
+  ],
+  s3e3_mantrap: [
+    { speaker: 'tito', text: 'They\'re stuck between the doors! The mantrap only opens the inner door after the outer one locks behind you.' },
+    { speaker: 'rico', text: 'One person, one badge, one face check. They brought guns to a door problem. More are coming from the dock!' },
+  ],
+  s3e3_logs: [
+    { speaker: 'tito', text: 'Access log says the outer door opened forty times tonight. Thirty-nine were the night shift. One was a badge we retired last year.' },
+    { speaker: 'rico', text: 'Then that\'s your alert rule: retired badge, wrong hour, wrong room. Logs only help if somebody actually reads them.' },
+  ],
+  s3e4_trash: [
+    { speaker: 'rico', text: 'He had a bag full of our printouts. A network diagram, a vendor invoice, and three sticky notes with VPN passwords.' },
+    { speaker: 'max', text: 'Sticky notes. On paper. In a dumpster. Behind a security company.' },
+    { speaker: 'rico', text: 'Anything with names, passwords or diagrams goes in a locked cross-cut shred bin. And nothing secret lives on a sticky note. Clean desk.' },
+  ],
+  s3e4_pentest: [
+    { speaker: 'max', text: 'Now the paid job. Mrs. Ortiz at the Neon 24/7 wants her robbery procedure tested. She signed the authorization letter.' },
+    { speaker: 'ortiz', text: 'Scope is the register and the silent alarm. My clerk Benny doesn\'t know. That\'s the point. Don\'t touch the back office.' },
+    { speaker: 'rico', text: 'Signed letter, written scope, an emergency contact, and a training pistol with an orange tip. That\'s how a physical pentest stays legal.' },
+  ],
+  s3e4_cops: [
+    { speaker: 'ortiz', text: 'Benny handed over the bag and pressed the alarm with his knee. Exactly like we practiced. I\'m so proud.' },
+    { speaker: 'narrator', text: 'Sirens on Ocean Drive. The silent alarm works a little too well.' },
+  ],
+  s3e4_letter: [
+    { speaker: 'reyes', text: 'Hands up! ...Sunset Shield? You again.' },
+    { speaker: 'rico', text: 'Authorized physical test, Sergeant. Letter signed by the owner, scope, dates, and an emergency number. Call it.' },
+    { speaker: 'reyes', text: 'Checks out. Next time tell dispatch the test window ahead of time. And give the lady her money back.' },
+  ],
+  s3e5_stopped: [
+    { speaker: 'rico', text: 'Van\'s down! Two rims sparking on the asphalt. Driver\'s getting out, and he brought friends.' },
+  ],
+  s3e5_tapes: [
+    { speaker: 'kai', text: 'Every tape is AES-256 encrypted, and the keys live in our vault on a separate system. They can\'t read a byte.' },
+    { speaker: 'rico', text: 'And the custody log shows exactly who held each case and when. That\'s why the theft didn\'t become a breach.' },
+  ],
+  s3e6_open: [
+    { speaker: 'narrator', text: 'Palmetto Bank, 4:12 PM. Rain on the glass. Three armed people, four employees, and one badge that should not exist.' },
+    { speaker: 'reyes', text: 'Perimeter\'s set. Vega, they asked for someone who isn\'t wearing a uniform. Talk first. Shoot never, if you can help it.' },
+  ],
+  s3e6_surrender: [
+    { speaker: 'reyes', text: 'Weapons down, all three. Hostages are walking out. Nobody hurt. Textbook.' },
+    { speaker: 'rico', text: 'Not textbook. They were scared and somebody lied to them. We gave them a way out.' },
+  ],
+  s3e6_badge: [
+    { speaker: 'rico', text: 'The staff door log: the badge belongs to a contractor named Hollis. He finished his project in March.' },
+    { speaker: 'marisol', text: 'March? HR closed his file. Nobody told facilities. The badge kept working for seven months.' },
+  ],
+  s3e6_insider: [
+    { speaker: 'rico', text: 'Hollis sold the badge to Black Lotus for two thousand dollars. An insider doesn\'t need to be evil. Just forgotten and broke.' },
+    { speaker: 'reyes', text: 'He\'s in custody. The door logs and CCTV you preserved will hold up in court. Good chain of custody.' },
+  ],
+  s3e6_epilogue: [
+    { speaker: 'narrator', text: 'One week later. Every Palmetto badge is encrypted. Departing staff lose access the day they leave. Toby\'s badge has a sleeve.' },
+    { speaker: 'max', text: 'Physical security is cybersecurity, Vega. The best firewall in the world doesn\'t stop a man holding the door.' },
+    { speaker: 'narrator', text: 'Season 3 complete. Ammu-Bay, the fight club, the shooting range and The Neon Bay Score are waiting.' },
+  ],
+});

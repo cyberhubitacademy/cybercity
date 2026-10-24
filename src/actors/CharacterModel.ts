@@ -3,6 +3,8 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { ASSETS, type PersonModel } from '../assets/Assets';
 import { Humanoid, type Outfit } from './Humanoid';
 import { hawaiianShirt } from '../world/textures';
+import type { PoseName } from '../systems/movement/poses';
+import { PoseLayer, type PoseBindings, type RigPoseOptions } from '../systems/movement/rigPose';
 
 // Skinned, animated CC0 character (Quaternius) with outfit recoloring and
 // smooth animation blending. Shares Humanoid's API so the player,
@@ -15,7 +17,39 @@ export interface Rig {
   animate(dt: number, speed: number, airborne?: boolean, seated?: boolean): void;
   setShirt(color: string, accent: string): void;
   wave(t: number): void;
+  /**
+   * Layer a procedural pose over the animation ('none' fades all out).
+   * Weights blend smoothly; several poses can be active ('aim' is applied last).
+   */
+  setPose(name: PoseName, weight?: number, opts?: RigPoseOptions): void;
+  /** Current blended weight of a pose (0..1). */
+  poseWeight(name: PoseName): number;
 }
+
+export type { PoseName, RigPoseOptions };
+
+const BONE_MAP: Record<string, keyof PoseBindings> = {
+  Abdomen: 'spine', Torso: 'chest', Neck: 'neck',
+  UpperArmL: 'armUL', LowerArmL: 'armLL', UpperArmR: 'armUR', LowerArmR: 'armLR',
+  UpperLegL: 'legUL', LowerLegL: 'legLL', UpperLegR: 'legUR', LowerLegR: 'legLR',
+};
+const NEXT_JOINT: Record<string, string> = {
+  Abdomen: 'Torso', Torso: 'Neck', Neck: 'Head',
+  UpperArmL: 'LowerArmL', LowerArmL: 'PalmL', UpperArmR: 'LowerArmR', LowerArmR: 'PalmR',
+  UpperLegL: 'LowerLegL', LowerLegL: 'LowerLegL_end', UpperLegR: 'LowerLegR', LowerLegR: 'LowerLegR_end',
+};
+
+/** Quaternius rigs keep the feet as IK bones under the root; when legs are posed, feet must follow the shins. */
+interface FootFollow {
+  foot: THREE.Object3D;
+  shin: THREE.Object3D;
+  pos: THREE.Vector3; // foot position in shin space (bind pose)
+  rot: THREE.Quaternion; // foot rotation relative to the shin (bind pose)
+}
+const _fq = new THREE.Quaternion();
+const _fq2 = new THREE.Quaternion();
+const _fv = new THREE.Vector3();
+const _fm = new THREE.Matrix4();
 
 const HEIGHT = 1.78;
 type Clip = 'idle' | 'walk' | 'run' | 'jump' | 'sit' | 'wave';
@@ -37,6 +71,9 @@ export class CharacterModel implements Rig {
   private current: Clip | null = null;
   private shirtMats: THREE.MeshStandardMaterial[] = [];
   private waving = 0;
+  private pose = new PoseLayer();
+  private bones: PoseBindings = {};
+  private feet: FootFollow[] = [];
 
   constructor(model: PersonModel, outfit: Outfit) {
     const src = ASSETS.people.get(model);
@@ -89,8 +126,58 @@ export class CharacterModel implements Rig {
         this.actions.set(clip, action);
       }
     }
+    this.bindPoseBones(obj);
     this.play('idle', 0);
     this.mixer.update(Math.random() * 2);
+  }
+
+  private bindPoseBones(obj: THREE.Object3D): void {
+    try {
+      const byName = new Map<string, THREE.Object3D>();
+      obj.traverse((o) => byName.set(o.name.replace(/\./g, ''), o));
+      for (const [name, key] of Object.entries(BONE_MAP)) {
+        const bone = byName.get(name), next = byName.get(NEXT_JOINT[name]);
+        if (!bone || !next || next.parent !== bone || next.position.lengthSq() < 1e-12) continue;
+        this.bones[key] = { bone, along: next.position.clone().normalize() };
+      }
+      obj.updateMatrixWorld(true);
+      for (const side of ['L', 'R']) {
+        const foot = byName.get(`Foot${side}`), shin = byName.get(`LowerLeg${side}`);
+        if (!foot || !shin || !foot.parent) continue;
+        const pos = shin.worldToLocal(foot.getWorldPosition(new THREE.Vector3()));
+        const rot = shin.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(foot.getWorldQuaternion(new THREE.Quaternion()));
+        this.feet.push({ foot, shin, pos, rot });
+      }
+    } catch (err) {
+      console.warn('[rig] pose bones unavailable', err);
+    }
+  }
+
+  setPose(name: PoseName, weight = 1, opts?: RigPoseOptions): void {
+    this.pose.set(name, weight, opts);
+  }
+
+  poseWeight(name: PoseName): number {
+    return this.pose.weight(name);
+  }
+
+  private applyPose(dt: number, speed: number): void {
+    if (!this.pose.apply(dt, speed, this.root, this.body, this.bones)) return;
+    if (this.pose.legWeight < 0.01) return;
+    for (const f of this.feet) {
+      const parent = f.foot.parent;
+      if (!parent) continue;
+      _fv.copy(f.pos);
+      f.shin.localToWorld(_fv);
+      parent.worldToLocal(_fv);
+      f.foot.position.copy(_fv);
+      _fm.extractRotation(f.shin.matrixWorld);
+      _fq.setFromRotationMatrix(_fm).multiply(f.rot);
+      _fm.extractRotation(parent.matrixWorld);
+      _fq2.setFromRotationMatrix(_fm).invert();
+      f.foot.quaternion.copy(_fq2.multiply(_fq));
+      f.foot.updateMatrixWorld(true);
+    }
   }
 
   private play(clip: Clip, fade = 0.22, timeScale = 1): void {
@@ -114,6 +201,7 @@ export class CharacterModel implements Rig {
     else if (speed > 0.25) this.play('walk', 0.2, Math.max(0.7, Math.min(1.5, speed / 1.6)));
     else this.play('idle', 0.3);
     this.mixer.update(dt);
+    if (!seated) this.applyPose(dt, speed);
   }
 
   setShirt(color: string, accent: string): void {

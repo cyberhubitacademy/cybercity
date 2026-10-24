@@ -17,39 +17,69 @@ export class Input {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
     window.addEventListener('mousemove', this.onMouseMove);
-    canvas.addEventListener('mousedown', this.onMouseDown);
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault()); // right mouse = aim
+    // Listen on the window: HUD layers sit above the canvas and would swallow clicks.
+    window.addEventListener('mousedown', this.onMouseDown);
+    window.addEventListener('contextmenu', (e) => { if (this.enabled && !this.overUi(e)) e.preventDefault(); }); // right mouse = aim
     window.addEventListener('mouseup', this.onMouseUp);
-    canvas.addEventListener('wheel', this.onWheel, { passive: true });
+    window.addEventListener('wheel', this.onWheel, { passive: true });
+  }
+
+  /** True while gameplay (not menus) owns the mouse; enables auto pointer lock. */
+  captureWanted = false;
+
+  /**
+   * GTA-style mouse: lock and hide the cursor so the camera can turn forever.
+   * Browsers only allow this during a click or key press, so it is retried on each.
+   */
+  lockPointer(): void {
+    if (document.pointerLockElement === this.canvas || !this.captureWanted || !this.enabled) return;
+    try {
+      // Plain request (no options): supported everywhere and runs inside the click/key gesture.
+      const r = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
+      void r?.catch?.(() => undefined);
+    } catch {
+      /* not allowed right now; next click/key will retry */
+    }
+  }
+
+  get locked(): boolean {
+    return document.pointerLockElement === this.canvas;
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code === 'Tab') e.preventDefault();
+    if (this.captureWanted && this.enabled && !this.locked && e.code !== 'Escape') this.lockPointer();
+    if (e.code === 'Tab' || e.code === 'F1') e.preventDefault();
     if (!this.down.has(e.code)) this.pressed.add(e.code);
     this.down.add(e.code);
     if (this.enabled && (e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
   };
   private onKeyUp = (e: KeyboardEvent): void => { this.down.delete(e.code); };
   private onBlur = (): void => { this.down.clear(); };
+  /** True when the event targets an interactive UI element (buttons, inputs, panels). */
+  private overUi(e: Event): boolean {
+    const t = e.target as HTMLElement | null;
+    return !!t?.closest?.('button, input, select, textarea, a, .panel, .cc-controls-card, [data-ui-interactive]');
+  }
+
   private onMouseDown = (e: MouseEvent): void => {
-    if (!this.enabled) return;
+    if (!this.enabled || this.overUi(e)) return;
+    if (this.captureWanted && !this.locked) this.lockPointer();
     if (!this.buttons.has(e.button)) this.buttonsPressed.add(e.button);
     this.buttons.add(e.button);
     this.dragging = true;
-    if (e.button === 0 && document.pointerLockElement !== this.canvas) {
-      this.canvas.requestPointerLock?.()?.catch?.(() => undefined);
-    }
+
   };
   private onMouseUp = (e: MouseEvent): void => { this.dragging = false; this.buttons.delete(e.button); };
   private onMouseMove = (e: MouseEvent): void => {
     if (!this.enabled) return;
-    if (document.pointerLockElement === this.canvas || this.dragging) {
+    // Only a locked (hidden, captured) mouse turns the camera, like GTA: unlimited turning, no screen edges.
+    if (document.pointerLockElement === this.canvas || (this.dragging && !this.captureWanted)) {
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     }
   };
   private onWheel = (e: WheelEvent): void => {
-    if (this.enabled) this.wheel += Math.sign(e.deltaY);
+    if (this.enabled && !this.overUi(e)) this.wheel += Math.sign(e.deltaY);
   };
 
   /** Mouse button held (0 = left, 2 = right). */

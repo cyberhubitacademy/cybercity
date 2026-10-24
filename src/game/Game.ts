@@ -144,6 +144,7 @@ export class Game {
       isPlayerDead: () => this.world.player.health <= 0,
       cinematic: (on) => {
         this.ui.setCinematic(on);
+        this.renderer.setCinematicDof(on, 7);
         this.input.enabled = !on;
         if (on) this.input.releasePointer();
       },
@@ -175,6 +176,13 @@ export class Game {
     this.wireWorldEvents();
     this.registerStaticInteractions();
     this.setupSystems(uiRoot);
+    // Esc while the mouse is captured: the browser releases the cursor itself (the key never
+    // reaches the page), so treat losing the lock during play as "pause", like GTA.
+    document.addEventListener('pointerlockchange', () => {
+      if (!this.input.locked && this.mode === 'playing' && this.input.captureWanted && !this.busy && !this.director.inCinematic) {
+        void this.openPause();
+      }
+    });
     window.addEventListener('pointerdown', () => this.audio.init(), { once: false });
     window.addEventListener('keydown', () => this.audio.init(), { once: false });
     void this.saveFile.restore().then(() => { if (this.mode === 'menu') this.showMainMenu(); });
@@ -185,6 +193,87 @@ export class Game {
     setTimeout(() => this.ui.hideLoading(), 250);
     this.showMainMenu();
     this.loop();
+  }
+
+  // ---------------------------------------------------------------- controls card
+
+  /** GTA-style controls card shown at the start of every session (New Game or Continue). */
+  private lockHint: HTMLDivElement | null = null;
+
+  /** Hide the cursor while playing; nudge the player to click if the browser hasn't granted the lock yet. */
+  private updatePointerUi(): void {
+    const playing = this.mode === 'playing' && !this.busy;
+    document.body.classList.toggle('cc-playing', playing);
+    const needHint = playing && this.input.captureWanted && !this.input.locked;
+    if (needHint && !this.lockHint) {
+      this.lockHint = document.createElement('div');
+      this.lockHint.className = 'cc-lock-hint';
+      this.lockHint.textContent = 'Click the game (or press any key) to take control of the camera';
+      document.body.append(this.lockHint);
+    } else if (!needHint && this.lockHint) {
+      this.lockHint.remove();
+      this.lockHint = null;
+    }
+  }
+
+  private showControlsCard(): void {
+    document.querySelector('.cc-controls-card')?.remove();
+    const rows: [string, string][] = [
+      ['W A S D', 'Walk / drive'],
+      ['Mouse', 'Look around (click the game to lock the mouse)'],
+      ['V', 'Switch first-person / third-person view'],
+      ['Shift', 'Sprint'],
+      ['Space', 'Jump · climb · handbrake in cars'],
+      ['C', 'Crouch / sneak · swim down'],
+      ['E', 'Talk · use · enter'],
+      ['F', 'Get in / out of a car · hijack a car on the road'],
+      ['Right mouse', 'Aim'],
+      ['Left mouse', 'Shoot / punch'],
+      ['Q (hold)', 'Weapon wheel'],
+      ['R', 'Reload · next radio station in cars'],
+      ['M', 'Map'],
+      ['P', 'Phone'],
+      ['G', 'Cyber Arcade'],
+      ['Tab', 'Missions & status'],
+      ['Esc', 'Pause menu'],
+    ];
+    const card = document.createElement('div');
+    card.className = 'cc-controls-card';
+    card.style.cssText = 'position:fixed;right:18px;top:110px;z-index:40;width:min(370px,90vw);background:rgba(0,0,0,0.78);color:#fff;'
+      + 'border-left:4px solid #ffd23f;border-radius:6px;padding:12px 14px 10px;font:600 14px Rajdhani,system-ui,sans-serif;'
+      + 'box-shadow:0 8px 30px rgba(0,0,0,0.5);pointer-events:auto;transition:opacity .4s,transform .4s';
+    const title = document.createElement('div');
+    title.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font:400 20px Anton,Impact,sans-serif;letter-spacing:1px;color:#ffd23f';
+    title.textContent = 'CONTROLS';
+    const close = document.createElement('button');
+    close.textContent = '✕';
+    close.title = 'Hide controls';
+    close.style.cssText = 'background:none;border:0;color:#fff;font-size:18px;cursor:pointer';
+    title.append(close);
+    card.append(title);
+    for (const [key, what] of rows) {
+      const r = document.createElement('div');
+      r.style.cssText = 'display:flex;gap:10px;align-items:center;margin:3px 0' + (key === 'V' ? ';color:#8ff4ff' : '');
+      const k = document.createElement('span');
+      k.textContent = key;
+      k.style.cssText = 'min-width:96px;text-align:center;padding:1px 6px;border-radius:4px;background:#fff;color:#111;font:700 12px "JetBrains Mono",monospace;box-shadow:0 2px 0 #888';
+      const d = document.createElement('span');
+      d.textContent = what;
+      r.append(k, d);
+      card.append(r);
+    }
+    const foot = document.createElement('div');
+    foot.style.cssText = 'margin-top:8px;color:#bbb;font-size:12px';
+    foot.textContent = 'Press F1 any time to show this again. Hides automatically in 25 s.';
+    card.append(foot);
+    document.body.append(card);
+    const hide = () => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(20px)';
+      setTimeout(() => card.remove(), 450);
+    };
+    close.onclick = hide;
+    setTimeout(hide, 25000);
   }
 
   // ---------------------------------------------------------------- gameplay systems
@@ -226,6 +315,8 @@ export class Game {
 
   private showMainMenu(): void {
     this.mode = 'menu';
+    this.input.captureWanted = false;
+    this.input.releasePointer();
     this.ui.setHudVisible(false);
     this.audio.setMusicMode('menu');
     this.world.hour = 15.5;
@@ -309,6 +400,7 @@ export class Game {
     await this.modal(() => this.ui.cutscene(this.lines(INTRO_CUTSCENE), { title: 'Neon Bay, 1986' }));
     this.ui.notify('Head to Sunset Shield HQ on Ocean Drive. Follow the yellow marker.', 'info');
     this.ui.tutorial.start();
+    this.showControlsCard();
     this.save();
   }
 
@@ -331,6 +423,7 @@ export class Game {
     this.enterWorld();
     await this.ui.fade(false);
     this.ui.notify('Welcome back to Neon Bay.', 'good');
+    this.showControlsCard();
   }
 
   private enterWorld(): void {
@@ -342,6 +435,8 @@ export class Game {
     this.applyProfileEffects();
     this.systems.init(this.sysCtx);
     this.mode = 'playing';
+    this.input.captureWanted = true;
+    this.input.lockPointer();
     this.ui.setHudVisible(true);
     this.audio.setMusicMode('world');
     this.cleanupMissionProps();
@@ -421,6 +516,7 @@ export class Game {
   /** Run a blocking UI screen: frees the mouse, freezes input, restores after. */
   private async modal<T>(fn: () => Promise<T>): Promise<T> {
     this.busy = true;
+    this.input.captureWanted = false;
     this.input.releasePointer();
     this.input.enabled = false;
     this.ui.prompt(null);
@@ -430,6 +526,8 @@ export class Game {
     } finally {
       this.busy = false;
       this.input.enabled = true;
+      this.input.captureWanted = this.mode === 'playing';
+      this.input.lockPointer(); // works if the closing click/key is still the active gesture
       this.audio.setPaused(false);
       this.clock.getDelta();
     }
@@ -903,10 +1001,16 @@ export class Game {
     if (i.wasPressed('KeyI')) { void this.openPause('inventory'); return; }
     if (i.wasPressed('KeyJ')) { void this.openPause('journal'); return; }
     if (i.wasPressed('KeyM')) { void this.openMap(); return; }
+    if (i.wasPressed('F1')) this.showControlsCard();
+    if (i.wasPressed('KeyV')) {
+      const fp = this.world.rig.toggleFirstPerson();
+      this.ui.notify(fp ? 'First-person view  ~V~ to switch back' : 'Third-person view  ~V~ for first person', 'info');
+    }
     if (i.wasPressed('KeyG') && !this.world.vehicle) { void this.openArcadeBoard(); return; }
     const w = this.world;
+    if (w.entry.busy) return; // getting in or out of a car
     if (w.vehicle) {
-      if (i.wasPressed('KeyE') || i.wasPressed('KeyF')) { w.exitVehicle(); return; }
+      if (i.wasPressed('KeyE') || i.wasPressed('KeyF')) { w.requestExit(); return; }
       if (i.wasPressed('KeyR')) {
         this.ui.tutorial.signal('radio');
         const name = this.audio.nextStation();
@@ -931,7 +1035,7 @@ export class Game {
     const pos = w.player.position;
     const v = w.nearestVehicle();
     if (v && !w.vehicle) {
-      this.interactions.set({ id: 'vehicle', x: v.position.x, z: v.position.z, radius: 99, priority: 0, title: `Enter ${v.def.name}`, desc: v.def.kind === 'boat' ? 'Speedboat — water only' : 'Drive anywhere in Neon Bay', action: () => w.enterVehicle(v) });
+      this.interactions.set({ id: 'vehicle', x: v.position.x, z: v.position.z, radius: 99, priority: 0, title: `Enter ${v.def.name}`, desc: v.def.kind === 'boat' ? 'Speedboat — water only' : 'Drive anywhere in Neon Bay', action: () => w.requestEnter(v) });
     } else this.interactions.remove('vehicle');
     const ped = w.peds.nearest(pos, 2.6);
     if (ped && !w.vehicle) {
@@ -1053,6 +1157,9 @@ export class Game {
     }
     if (this.chase) blips.push({ x: this.chase.van.position.x, z: this.chase.van.position.z, kind: 'target', color: '#ff2fa0', label: 'Pink Tide van' });
     blips.push({ x: -46, z: -30, kind: 'shop', label: 'Byte Bazaar' });
+    // gameplay systems contribute their own blips (shops, robberies, police, enemies...)
+    type BlipSrc = { blips?(): Blip[] };
+    for (const sys of this.systems.list()) for (const b of (sys as unknown as BlipSrc).blips?.() ?? []) blips.push(b);
     for (const t of TERMINALS) if (ARCADE_TERMINALS.has(t.id)) blips.push({ x: t.x, z: t.z, kind: 'terminal', color: '#ffd23f', label: 'Cyber Arcade' });
     if (effects(this.profile).shardRadar) for (const s of SHARDS) if (!this.profile.shards.includes(s.id)) blips.push({ x: s.x, z: s.z, kind: 'shard', label: 'Data shard' });
     const dest = this.waypoint ?? (this.director.running ? this.director.target() : a ? objectiveTarget(a.objective) : null);
@@ -1157,7 +1264,7 @@ export class Game {
       this.handleKeys();
       // Slow motion scales game time only; UI and camera keep real time.
       if (this.timeScale < 1 && performance.now() > this.slowUntil) this.timeScale = 1;
-      const gdt = dt * this.timeScale;
+      const gdt = dt * Math.min(this.timeScale, (this.systems.get('combat') as unknown as { timeScale?(): number } | undefined)?.timeScale?.() ?? 1);
       if (!this.busy) {
         w.update(gdt, this.input, !this.director.inCinematic);
         this.updateDynamicInteractions();
@@ -1179,6 +1286,7 @@ export class Game {
       this.cinematic.update(dt); // overrides the gameplay camera while a shot plays
       this.updateHud();
     }
+    this.updatePointerUi();
     // weather darkens the scene; lightning flashes light it up
     w.env.hemi.intensity += this.weather.flash * 2.5;
     this.renderer.setLook(w.env.exposure * (1 - this.weather.gloom * 0.35), w.env.night, this.settings.bloom);

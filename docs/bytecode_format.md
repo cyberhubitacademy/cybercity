@@ -56,7 +56,7 @@ ends the code with `END_SCRIPT`, so no label can point past the last
 instruction.
 
 Opcode ranges: `0x0000–0x00FF` VM control (see `docs/scripting_api.md`),
-`0x0100+` engine commands. Opcode numbers are stable within a format version.
+`0x0100+` engine commands (`0x06xx` = combat, police and crime, added in Season 3 without a format bump: new opcodes only). Opcode numbers are stable within a format version.
 
 ## Versioning and compatibility
 

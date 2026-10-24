@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import type { Quality } from '../world/Environment';
 
 // Rendering pipeline: scene -> ambient occlusion -> bloom -> tone map -> color grade.
@@ -14,30 +15,42 @@ import type { Quality } from '../world/Environment';
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    saturation: { value: 1.18 },
-    contrast: { value: 1.06 },
-    warmth: { value: 0.06 },
-    vignette: { value: 0.32 },
+    texel: { value: new THREE.Vector2(1 / 1280, 1 / 720) },
+    saturation: { value: 1.12 },
+    vibrance: { value: 0.35 },
+    contrast: { value: 1.1 },
+    warmth: { value: 0.07 },
+    sharpen: { value: 0.35 },
+    vignette: { value: 0.22 },
     night: { value: 0 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  // "Leonida" look: crisp detail, filmic S-curve, vibrance (boosts muted colors more than
+  // already-saturated ones), teal shadows, warm peach highlights, light vignette.
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float saturation; uniform float contrast; uniform float warmth; uniform float vignette; uniform float night;
+    uniform sampler2D tDiffuse; uniform vec2 texel;
+    uniform float saturation; uniform float vibrance; uniform float contrast; uniform float warmth;
+    uniform float sharpen; uniform float vignette; uniform float night;
     varying vec2 vUv;
+    vec3 sCurve(vec3 x, float k) { return mix(x, x * x * (3.0 - 2.0 * x), k); }
     void main(){
-      vec4 c = texture2D(tDiffuse, vUv);
-      vec3 col = c.rgb;
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      // unsharp mask (4 taps) for GTA-crisp edges
+      vec3 blur = (texture2D(tDiffuse, vUv + vec2(texel.x, 0.0)).rgb + texture2D(tDiffuse, vUv - vec2(texel.x, 0.0)).rgb
+                 + texture2D(tDiffuse, vUv + vec2(0.0, texel.y)).rgb + texture2D(tDiffuse, vUv - vec2(0.0, texel.y)).rgb) * 0.25;
+      vec3 col = clamp(c + (c - blur) * sharpen, 0.0, 1.0);
       float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      col = mix(vec3(l), col, saturation);
-      col = (col - 0.5) * contrast + 0.5;
-      // split toning: warm highlights, teal/purple shadows
-      vec3 shadowTint = mix(vec3(0.0, 0.05, 0.08), vec3(0.06, 0.0, 0.10), night);
-      vec3 highTint = mix(vec3(0.10, 0.04, -0.03), vec3(0.08, 0.0, 0.06), night);
-      col += shadowTint * (1.0 - smoothstep(0.0, 0.5, l)) * 0.6;
-      col += highTint * smoothstep(0.45, 1.0, l) * warmth * 6.0;
+      float sat = max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b));
+      col = mix(vec3(l), col, saturation + vibrance * (1.0 - sat));
+      col = clamp((col - 0.5) * contrast + 0.5, 0.0, 1.0);
+      col = sCurve(col, 0.35);
+      vec3 shadowTint = mix(vec3(-0.01, 0.035, 0.06), vec3(0.06, 0.0, 0.10), night);
+      vec3 highTint = mix(vec3(0.10, 0.045, -0.02), vec3(0.08, 0.0, 0.06), night);
+      col += shadowTint * (1.0 - smoothstep(0.0, 0.45, l)) * 0.7;
+      col += highTint * smoothstep(0.5, 1.0, l) * warmth * 6.0;
       float d = distance(vUv, vec2(0.5));
-      col *= 1.0 - vignette * smoothstep(0.35, 0.85, d);
-      gl_FragColor = vec4(clamp(col, 0.0, 1.0), c.a);
+      col *= 1.0 - vignette * smoothstep(0.4, 0.9, d);
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
     }`,
 };
 
@@ -47,6 +60,7 @@ export class Renderer {
   private bloom: UnrealBloomPass;
   private gtao?: GTAOPass;
   private grade: ShaderPass;
+  private dof?: BokehPass;
   private renderPass: RenderPass;
 
   constructor(canvas: HTMLCanvasElement, scene: THREE.Scene, private camera: THREE.PerspectiveCamera, public quality: Quality) {
@@ -79,6 +93,12 @@ export class Renderer {
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.55, 0.6, 0.82);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
+    if (quality !== 'low') {
+      // Cinematic depth of field, only switched on during cutscenes.
+      this.dof = new BokehPass(scene, camera, { focus: 8, aperture: 0.0016, maxblur: 0.006 });
+      this.dof.enabled = false;
+      this.composer.addPass(this.dof);
+    }
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(this.grade);
 
@@ -153,11 +173,14 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.composer.setSize(window.innerWidth, window.innerHeight);
+    const pr = this.renderer.getPixelRatio();
+    this.grade.uniforms.texel.value.set(1 / (window.innerWidth * pr), 1 / (window.innerHeight * pr));
   };
 
   /** Swap the rendered scene (the world is built after the renderer). */
   setScene(scene: THREE.Scene): void {
     this.renderPass.scene = scene;
+    if (this.dof) this.dof.scene = scene;
     if (this.gtao) this.gtao.scene = scene;
   }
 
@@ -172,6 +195,13 @@ export class Renderer {
   private lastW = 0;
   private lastH = 0;
   private lastDpr = 0;
+
+  /** Cutscene depth of field: focus on a subject this many meters from the camera. */
+  setCinematicDof(on: boolean, focus = 8): void {
+    if (!this.dof) return;
+    this.dof.enabled = on;
+    (this.dof.uniforms as Record<string, { value: number }>).focus.value = focus;
+  }
 
   render(): void {
     // Some environments (devtools emulation, embedded panes) resize without a resize event.

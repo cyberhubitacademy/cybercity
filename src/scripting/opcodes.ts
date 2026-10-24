@@ -8,6 +8,7 @@ import type { ParamType } from './types';
 //   0x0300-0x03FF  entities (vehicles, actors)
 //   0x0400-0x04FF  story & cyber-challenge commands (async)
 //   0x0500-0x05FF  cinematics, music and atmosphere
+//   0x0600-0x06FF  combat, police and crime (Season 3)
 
 /** Operand kinds a control opcode accepts in each position. */
 export type OperandKind = 'value' | 'label' | 'var';
@@ -143,6 +144,21 @@ export const COMMANDS: CommandSpec[] = [
   { opcode: 0x0508, name: 'SET_HOUR', params: ['float'], doc: 'Jump the clock to an hour of day (0..24).' },
   { opcode: 0x0509, name: 'SET_WEATHER', params: ['str'], doc: 'Weather: clear, rain or storm.' },
   { opcode: 0x050a, name: 'PLAY_SFX', params: ['str'], doc: 'Play a sound effect by name.' },
+  // ---- combat / police / crime (Season 3) ----
+  { opcode: 0x0600, name: 'GIVE_WEAPON', params: ['str', 'int'], doc: 'Give the player a weapon (fists, bat, knife, taser, pistol, smg, shotgun, rifle, sniper, or "armor") with N rounds.' },
+  { opcode: 0x0601, name: 'SPAWN_ENEMY', params: ['str', 'float', 'float', 'float'], returns: 'int', doc: 'Spawn an enemy type (lotus, lotus_heavy, lotus_sniper, gang, thug, courier, intruder, guard, hostage_taker) at x z heading; returns an enemy handle.' },
+  { opcode: 0x0602, name: 'SPAWN_ENEMY_GROUP', params: ['str', 'str', 'int'], returns: 'int', doc: 'Spawn N enemies of a type around a named place; returns a group handle.' },
+  { opcode: 0x0603, name: 'WAIT_ENEMIES_CLEARED', params: ['int'], async: true, doc: 'Wait until every enemy in a group is dead, knocked out, tied up, surrendered or gone.' },
+  { opcode: 0x0604, name: 'SET_ENEMY_TARGET', params: ['int'], doc: 'Enemy (or group) handle starts hunting the player immediately.' },
+  { opcode: 0x0605, name: 'IS_ENEMY_DEAD', params: ['int'], returns: 'bool', doc: 'Enemy handle is out of the fight (or every member of a group handle is).' },
+  { opcode: 0x0606, name: 'SET_WANTED', params: ['int'], doc: 'Set the police wanted level (0..5 stars).' },
+  { opcode: 0x0607, name: 'CLEAR_WANTED', params: [], doc: 'Clear the wanted level and call off the police.' },
+  { opcode: 0x0608, name: 'WAIT_WANTED_CLEARED', params: [], async: true, doc: 'Wait until the player has lost the police (0 stars).' },
+  { opcode: 0x0609, name: 'SPAWN_PICKUP', params: ['str', 'float', 'float'], doc: 'Glowing pickup at x z: a weapon id, "ammo", "armor", "health" or "cash".' },
+  { opcode: 0x060a, name: 'ARREST_TARGET', params: ['int'], returns: 'bool', async: true, doc: 'Resolves TRUE when the enemy is knocked out, tased, zip-tied or surrenders; FALSE if killed or escaped.' },
+  { opcode: 0x060b, name: 'START_ROBBERY', params: ['str'], returns: 'bool', async: true, doc: 'Arm a store robbery (beach, oldtown, harbor); resolves TRUE when the cash bag is grabbed.' },
+  { opcode: 0x060c, name: 'WAIT_VEHICLE_DISABLED', params: ['int', 'int'], returns: 'bool', async: true, doc: 'Vehicle handle, time limit (s): TRUE when its tires/engine are shot out and it stops, FALSE if it escapes.' },
+  { opcode: 0x060d, name: 'NEGOTIATE', params: ['str'], returns: 'bool', async: true, doc: 'Hostage negotiation scene (bank); TRUE when the suspects surrender, FALSE when it turns into a firefight.' },
 ];
 
 const commandByName = new Map(COMMANDS.map((c) => [c.name, c]));

@@ -1,13 +1,27 @@
 import * as THREE from 'three';
 import type { CollisionWorld } from '../world/Collision';
-import { isWater } from '../world/layout';
+import { BEACH_X, isWater } from '../world/layout';
 import { ASSETS, type CarModel } from '../assets/Assets';
+import { chromeMat, customPaint, darkMat, glassMat, headMat, paint, rimMat, seatMat, tailMat, tireMat, type Finish } from './materials';
+import { buildAirboat, buildBicycle, buildDirtBike, buildHeli, buildJetSki, buildKayak, emptyBuilt, type BuiltMesh } from './meshes';
+import {
+  NO_UPGRADES, applyDamage, gripCurve, healthState, impactDamage, landingDamage, sanitizeUpgrades, springStep, torqueCurve, tunedStats,
+  type HealthState, type TunedStats, type Upgrades,
+} from './physics';
+import { rampAt, rampHeightAt } from './ramps';
 
-// Arcade vehicle model (GTA-feel rather than simulation): forward/lateral
-// velocity split with grip, handbrake drifts, speed-scaled steering, and
-// two-circle collision against the city boxes. Boats only move on water.
+export { headMat, tailMat };
 
-export type VehicleKind = 'stinger' | 'cabrio' | 'shield' | 'sedan' | 'taxi' | 'van' | 'bike' | 'boat' | 'police' | 'pickup';
+// Arcade vehicle model with a GTA feel: forward/lateral velocity split with
+// a tire grip curve (drifts, handbrake slides), weight transfer shown as body
+// pitch/roll on springs, curb bounces, airborne physics (ramps, roofs),
+// damage with dents, and per-medium handling (land, water, amphibious, air).
+
+export type VehicleKind =
+  | 'stinger' | 'cabrio' | 'shield' | 'sedan' | 'taxi' | 'van' | 'bike' | 'boat' | 'police' | 'pickup'
+  | 'jetski' | 'kayak' | 'airboat' | 'bicycle' | 'dirtbike' | 'heli';
+
+export type Medium = 'land' | 'water' | 'amphibious' | 'air';
 
 export interface VehicleDef {
   kind: VehicleKind;
@@ -20,20 +34,49 @@ export interface VehicleDef {
   length: number;
   width: number;
   colors: string[];
+  medium?: Medium;
+  /** Max health (hp). */
+  health?: number;
+  /** Showroom price in $. */
+  value?: number;
+  /** Grip multiplier on sand/dirt (road cars ~0.7, dirt bikes > 1). */
+  offroad?: number;
+  /** Bikes, bicycles: lean into turns. */
+  twoWheel?: boolean;
+  /** Shift = lean back for a wheelie. */
+  canWheelie?: boolean;
+  /** Human powered (no engine sound / exhaust). */
+  pedal?: boolean;
+  /** Rider visible (open cockpit). */
+  open?: boolean;
+  /** Driver seat (local, x = left). */
+  seat?: [number, number, number];
+  /** Passenger seat (local). */
+  passengerSeat?: [number, number, number];
 }
 
 export const VEHICLE_DEFS: Record<VehicleKind, VehicleDef> = {
-  stinger: { kind: 'stinger', name: 'Vortex Stinger', maxSpeed: 52, accel: 17, brake: 34, turn: 2.2, grip: 7, length: 4.5, width: 1.95, colors: ['#ff2fa0', '#ff4d6d', '#ffd23f', '#ffffff'] },
-  cabrio: { kind: 'cabrio', name: 'Palmetto Cabrio', maxSpeed: 44, accel: 13, brake: 30, turn: 2.1, grip: 6.5, length: 4.6, width: 1.9, colors: ['#19c3d6', '#9ff0e0', '#ff9fc8', '#f6e3b4'] },
-  shield: { kind: 'shield', name: 'Sunset Shield Interceptor', maxSpeed: 46, accel: 14, brake: 32, turn: 2.0, grip: 7, length: 4.8, width: 2.05, colors: ['#f7f7fb'] },
-  sedan: { kind: 'sedan', name: 'Coral Sedan', maxSpeed: 38, accel: 10, brake: 28, turn: 1.9, grip: 6, length: 4.7, width: 1.9, colors: ['#7fb4d6', '#c8b6ff', '#a0e7ff', '#ffd6a5', '#b8f2b0', '#e8e8f0', '#3a3a4a'] },
-  taxi: { kind: 'taxi', name: 'Bay Cab', maxSpeed: 38, accel: 10, brake: 28, turn: 1.9, grip: 6, length: 4.8, width: 1.9, colors: ['#ffd23f'] },
-  van: { kind: 'van', name: 'Pink Tide Van', maxSpeed: 36, accel: 9, brake: 24, turn: 1.6, grip: 5.5, length: 5.4, width: 2.1, colors: ['#f2eef5'] },
-  bike: { kind: 'bike', name: 'Neon PCJ', maxSpeed: 50, accel: 18, brake: 30, turn: 2.6, grip: 8, length: 2.1, width: 0.7, colors: ['#ffd23f', '#ff2fa0', '#19e6ff'] },
-  police: { kind: 'police', name: 'Neon Bay PD Cruiser', maxSpeed: 46, accel: 14, brake: 32, turn: 2.0, grip: 7, length: 4.6, width: 1.95, colors: ['#f4f6fb'] },
-  pickup: { kind: 'pickup', name: 'Gulf Coast Pickup', maxSpeed: 38, accel: 11, brake: 28, turn: 1.8, grip: 6, length: 5.0, width: 2.05, colors: ['#c94f3d', '#2f5d8a', '#e8e1d4', '#3a3a44'] },
-  boat: { kind: 'boat', name: 'Squalo Speedboat', maxSpeed: 40, accel: 11, brake: 12, turn: 1.4, grip: 2.2, length: 7, width: 2.4, colors: ['#ffffff'] },
+  stinger: { kind: 'stinger', name: 'Vortex Stinger', maxSpeed: 52, accel: 17, brake: 34, turn: 2.2, grip: 7, length: 4.5, width: 1.95, colors: ['#ff2fa0', '#ff4d6d', '#ffd23f', '#ffffff'], health: 1000, value: 12000, offroad: 0.7, seat: [0.4, 0.45, -0.25], passengerSeat: [-0.4, 0.45, -0.25] },
+  cabrio: { kind: 'cabrio', name: 'Palmetto Cabrio', maxSpeed: 44, accel: 13, brake: 30, turn: 2.1, grip: 6.5, length: 4.6, width: 1.9, colors: ['#19c3d6', '#9ff0e0', '#ff9fc8', '#f6e3b4'], health: 950, value: 7500, offroad: 0.7, open: true, seat: [0.42, 0.5, -0.3], passengerSeat: [-0.42, 0.5, -0.3] },
+  shield: { kind: 'shield', name: 'Sunset Shield Interceptor', maxSpeed: 46, accel: 14, brake: 32, turn: 2.0, grip: 7, length: 4.8, width: 2.05, colors: ['#f7f7fb'], health: 1300, value: 9000, offroad: 0.85, seat: [0.45, 0.6, -0.1], passengerSeat: [-0.45, 0.6, -0.1] },
+  sedan: { kind: 'sedan', name: 'Coral Sedan', maxSpeed: 38, accel: 10, brake: 28, turn: 1.9, grip: 6, length: 4.7, width: 1.9, colors: ['#7fb4d6', '#c8b6ff', '#a0e7ff', '#ffd6a5', '#b8f2b0', '#e8e8f0', '#3a3a4a'], health: 1000, value: 3500, offroad: 0.7, seat: [0.42, 0.5, -0.1], passengerSeat: [-0.42, 0.5, -0.1] },
+  taxi: { kind: 'taxi', name: 'Bay Cab', maxSpeed: 38, accel: 10, brake: 28, turn: 1.9, grip: 6, length: 4.8, width: 1.9, colors: ['#ffd23f'], health: 1000, value: 3800, offroad: 0.7, seat: [0.42, 0.5, 0.1], passengerSeat: [-0.42, 0.5, -0.9] },
+  van: { kind: 'van', name: 'Pink Tide Van', maxSpeed: 36, accel: 9, brake: 24, turn: 1.6, grip: 5.5, length: 5.4, width: 2.1, colors: ['#f2eef5'], health: 1400, value: 4800, offroad: 0.75, seat: [0.5, 0.8, 1.2], passengerSeat: [-0.5, 0.8, 1.2] },
+  bike: { kind: 'bike', name: 'Neon PCJ', maxSpeed: 50, accel: 18, brake: 30, turn: 2.6, grip: 8, length: 2.1, width: 0.7, colors: ['#ffd23f', '#ff2fa0', '#19e6ff'], health: 500, value: 4000, offroad: 0.8, twoWheel: true, canWheelie: true, open: true, seat: [0, 0.62, -0.3] },
+  police: { kind: 'police', name: 'Neon Bay PD Cruiser', maxSpeed: 46, accel: 14, brake: 32, turn: 2.0, grip: 7, length: 4.6, width: 1.95, colors: ['#f4f6fb'], health: 1300, value: 15000, offroad: 0.75, seat: [0.42, 0.5, -0.1], passengerSeat: [-0.42, 0.5, -0.1] },
+  pickup: { kind: 'pickup', name: 'Gulf Coast Pickup', maxSpeed: 38, accel: 11, brake: 28, turn: 1.8, grip: 6, length: 5.0, width: 2.05, colors: ['#c94f3d', '#2f5d8a', '#e8e1d4', '#3a3a44'], health: 1400, value: 5200, offroad: 0.95, seat: [0.45, 0.65, 0.3], passengerSeat: [-0.45, 0.65, 0.3] },
+  boat: { kind: 'boat', name: 'Squalo Speedboat', maxSpeed: 40, accel: 11, brake: 12, turn: 1.4, grip: 2.2, length: 7, width: 2.4, colors: ['#ffffff'], medium: 'water', health: 900, value: 9500, open: true, seat: [0.4, 0.75, 0.0], passengerSeat: [-0.4, 0.75, 0.0] },
+  jetski: { kind: 'jetski', name: 'Wave Viper Jet Ski', maxSpeed: 30, accel: 13, brake: 8, turn: 2.4, grip: 2.8, length: 3.0, width: 1.1, colors: ['#ff2fa0', '#19e6ff', '#ffd23f', '#3dffb0'], medium: 'water', health: 500, value: 2600, twoWheel: true, open: true, seat: [0, 0.32, -0.42] },
+  kayak: { kind: 'kayak', name: 'Mangrove Kayak', maxSpeed: 4.5, accel: 2.4, brake: 3, turn: 1.3, grip: 3, length: 3.6, width: 0.8, colors: ['#ff8a3d', '#ffd23f', '#19c3d6'], medium: 'water', health: 200, value: 400, pedal: true, open: true, seat: [0, -0.05, -0.1] },
+  airboat: { kind: 'airboat', name: 'Everglade Airboat', maxSpeed: 26, accel: 9, brake: 6, turn: 1.6, grip: 2.0, length: 4.6, width: 2.2, colors: ['#2f8a5d', '#c94f3d', '#e8e1d4'], medium: 'amphibious', health: 800, value: 5500, open: true, seat: [0, 0.95, -0.6] },
+  bicycle: { kind: 'bicycle', name: 'Boardwalk Cruiser Bicycle', maxSpeed: 11, accel: 4.5, brake: 12, turn: 2.6, grip: 8, length: 1.75, width: 0.6, colors: ['#19e6ff', '#ff7cc6', '#ffd23f', '#3dffb0'], health: 250, value: 300, offroad: 0.9, twoWheel: true, canWheelie: true, pedal: true, open: true, seat: [0, 0.55, -0.25] },
+  dirtbike: { kind: 'dirtbike', name: 'Dune Ripper 250', maxSpeed: 40, accel: 17, brake: 26, turn: 2.7, grip: 8.5, length: 2.1, width: 0.75, colors: ['#ff8a3d', '#3dffb0', '#ff2fa0'], health: 450, value: 2800, offroad: 1.1, twoWheel: true, canWheelie: true, open: true, seat: [0, 0.62, -0.3] },
+  heli: { kind: 'heli', name: 'Skylark Helicopter', maxSpeed: 48, accel: 10, brake: 8, turn: 1.5, grip: 1, length: 9, width: 2.4, colors: ['#19e6ff', '#ff2fa0', '#f4f6fb'], medium: 'air', health: 900, value: 45000, seat: [0.4, 0.9, 0.55], passengerSeat: [-0.4, 0.9, 0.55] },
 };
+
+export function mediumOf(def: VehicleDef): Medium {
+  return def.medium ?? 'land';
+}
 
 export interface Controls {
   throttle: number; // -1..1 (negative = reverse)
@@ -41,24 +84,24 @@ export interface Controls {
   handbrake: boolean;
 }
 
-// --- shared materials ---
-const paintCache = new Map<string, THREE.MeshPhysicalMaterial>();
-function paint(color: string): THREE.MeshPhysicalMaterial {
-  let m = paintCache.get(color);
-  if (!m) {
-    m = new THREE.MeshPhysicalMaterial({ color, metalness: 0.55, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.3 });
-    paintCache.set(color, m);
-  }
-  return m;
+/** Helicopter inputs (each -1..1). Set every frame by the vehicles system. */
+export interface FlightInput {
+  lift: number;
+  yaw: number;
+  pitch: number;
+  roll: number;
 }
-const glassMat = new THREE.MeshPhysicalMaterial({ color: '#16202e', metalness: 0.2, roughness: 0.05, clearcoat: 1, envMapIntensity: 1.8, transparent: true, opacity: 0.88 });
-const tireMat = new THREE.MeshStandardMaterial({ color: '#141418', roughness: 0.9 });
-const rimMat = new THREE.MeshStandardMaterial({ color: '#d9dde6', metalness: 0.9, roughness: 0.25 });
-const chromeMat = new THREE.MeshStandardMaterial({ color: '#eeeeee', metalness: 1, roughness: 0.15 });
-const darkMat = new THREE.MeshStandardMaterial({ color: '#202028', roughness: 0.6 });
-const seatMat = new THREE.MeshStandardMaterial({ color: '#f2e6d8', roughness: 0.7 });
-export const headMat = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#fff4d6', emissiveIntensity: 0.4 });
-export const tailMat = new THREE.MeshStandardMaterial({ color: '#550010', emissive: '#ff1030', emissiveIntensity: 0.6 });
+
+export interface Look {
+  color: string;
+  finish: Finish;
+  /** Rim color (null = stock). */
+  wheel: string | null;
+  /** Window tint 0 (stock) .. 3 (limo). */
+  tint: number;
+}
+
+export type PanelId = 'doorL' | 'doorR' | 'hood' | 'trunk';
 
 /** Car side profile (x = along length, y = up), extruded across the width with a bevel. */
 function profileBody(points: [number, number][], width: number, mat: THREE.Material): THREE.Mesh {
@@ -165,7 +208,7 @@ function modelVehicle(def: VehicleDef, color: string): { root: THREE.Group; whee
   return { root, wheels, steerWheels: steer };
 }
 
-export function buildVehicleMesh(def: VehicleDef, color: string): { root: THREE.Group; wheels: THREE.Group[]; steerWheels: THREE.Group[] } {
+function buildCarMesh(def: VehicleDef, color: string): { root: THREE.Group; wheels: THREE.Group[]; steerWheels: THREE.Group[] } {
   const fromModel = modelVehicle(def, color);
   if (fromModel) return fromModel;
   const root = new THREE.Group();
@@ -217,7 +260,7 @@ export function buildVehicleMesh(def: VehicleDef, color: string): { root: THREE.
     taxi: [[-2.4, 0.35], [-2.45, 0.95], [-1.6, 1.0], [-0.9, 1.48], [0.6, 1.48], [1.3, 1.0], [2.4, 0.86], [2.45, 0.35]],
     van: [[-2.7, 0.4], [-2.7, 2.2], [1.2, 2.2], [1.9, 1.3], [2.7, 1.05], [2.72, 0.4]],
   };
-  const prof = profiles[def.kind];
+  const prof = profiles[def.kind] ?? profiles.sedan;
   const shell = profileBody(smoothProfile(prof, 3), W, body);
   root.add(shell);
 
@@ -311,14 +354,50 @@ export function buildVehicleMesh(def: VehicleDef, color: string): { root: THREE.
   return { root, wheels, steerWheels: steer };
 }
 
+export function buildVehicleMesh(def: VehicleDef, color: string): BuiltMesh {
+  switch (def.kind) {
+    case 'jetski': return buildJetSki(color);
+    case 'kayak': return buildKayak(color);
+    case 'airboat': return buildAirboat(color);
+    case 'bicycle': return buildBicycle(color);
+    case 'dirtbike': return buildDirtBike(color);
+    case 'heli': return buildHeli(color);
+    default: {
+      const r = buildCarMesh(def, color);
+      return { ...emptyBuilt(r.root), wheels: r.wheels, steerWheels: r.steerWheels };
+    }
+  }
+}
+
 let nextId = 1;
+
+/** Arcade gravity (a bit stronger than real for snappy jumps). */
+export const GRAVITY = 20;
+const WATER_Y = -0.35;
+const HELI_CEILING = 260;
+
+const _v = new THREE.Vector3();
+const _q = new THREE.Vector3();
+
+interface Slot { mesh: THREE.Mesh; index: number }
+
+interface Panel { open: boolean; angle: number; pivot: THREE.Group | null }
+
+/** Sand / dirt (beach east of Ocean Drive). */
+export function isSand(x: number, z: number): boolean {
+  return x > BEACH_X - 3 && !isWater(x, z);
+}
 
 export class Vehicle {
   readonly id = nextId++;
   readonly root: THREE.Group;
+  /** Visual body (suspension pitch/roll/heave applied here). */
+  readonly body: THREE.Group;
   private wheels: THREE.Group[];
   private steerWheels: THREE.Group[];
+  private built: BuiltMesh;
   readonly position = new THREE.Vector3();
+  /** World velocity; y is vertical speed. */
   readonly velocity = new THREE.Vector3();
   yaw = 0;
   /** Signed forward speed (m/s). */
@@ -326,26 +405,156 @@ export class Vehicle {
   controls: Controls = { throttle: 0, steer: 0, handbrake: false };
   driver: 'player' | 'ai' | null = null;
   speedMult = 1;
-  private wheelSpin = 0;
-  private lean = 0;
-  private bob = Math.random() * 10;
   /** Called with impact strength when hitting something. */
   onImpact?: (strength: number) => void;
-  readonly color: string;
+  /** Called after health drops (amount in hp, world contact point). */
+  onDamage?: (amount: number, x: number, z: number) => void;
+  /** Left the ground with upward speed (ramp id when launched from a stunt ramp). */
+  onLaunch?: (rampId: string | null) => void;
+  /** Touched down after `airTime` seconds with `impact` m/s vertical speed. */
+  onLand?: (impact: number, airTime: number) => void;
+  color: string;
+  /** Body height in meters (for the first-person windshield camera). */
+  height = 1.4;
+
+  // --- damage & tuning ---
+  maxHealth: number;
+  health: number;
+  upgrades: Upgrades = { ...NO_UPGRADES };
+  stats: TunedStats;
+  engineOn = true;
+  /** Nitro tank 0..1 (only used when upgrades.nitro). */
+  nitro = 1;
+  /** Set by the vehicles system while N is held. */
+  nitroActive = false;
+  /** Set by the vehicles system while Shift is held (bikes: wheelie). */
+  leanBack = false;
+  /** Helicopter input for this frame (consumed by update). */
+  flight: FlightInput | null = null;
+  /** Owner tag (personal vehicle id) or null. */
+  tag: string | null = null;
+  /** Vertex dents on impact (enabled for the player's car only). */
+  dentable = false;
+  lightsOn = false;
+  look: Look | null = null;
+
+  // --- dynamic state ---
+  airborne = false;
+  airTime = 0;
+  /** Lateral (sideways) sliding speed, m/s. */
+  slip = 0;
+  /** Slip angle (radians, absolute). */
+  slipAngle = 0;
+  /** Wheelie angle (radians). */
+  wheelie = 0;
+  /** Rotor/engine spool 0..1 (helicopter). */
+  spool = 0;
+  yawRate = 0;
+  braking = false;
+  onSand = false;
+  /** Water craft currently in water. */
+  inWater = false;
+  launchRamp: string | null = null;
+  readonly launchPos = { x: 0, z: 0 };
+  private pitch = 0; private pitchV = 0;
+  private roll = 0; private rollV = 0;
+  private heave = 0; private heaveV = 0;
+  private lean = 0;
+  private tiltF = 0; private tiltS = 0;
+  private bob = Math.random() * 10;
+  private wheelSpin = 0;
+  private wheelR: number;
+  private rotorSpin = 0;
+  private paddleT = 0;
+  private lastSafe = new THREE.Vector3();
+  private paintSlots: Slot[] = [];
+  private rimSlots: Slot[] = [];
+  private glassSlots: Slot[] = [];
+  private panels: Record<PanelId, Panel> = {
+    doorL: { open: false, angle: 0, pivot: null }, doorR: { open: false, angle: 0, pivot: null },
+    hood: { open: false, angle: 0, pivot: null }, trunk: { open: false, angle: 0, pivot: null },
+  };
+  private dents = new Map<THREE.Mesh, THREE.BufferGeometry>();
+  private dentTotal = 0;
 
   constructor(readonly def: VehicleDef, color?: string) {
     this.color = color ?? def.colors[Math.floor(Math.random() * def.colors.length)];
-    const built = buildVehicleMesh(def, this.color);
-    this.root = built.root;
-    this.wheels = built.wheels;
-    this.steerWheels = built.steerWheels;
+    this.built = buildVehicleMesh(def, this.color);
+    this.root = this.built.root;
+    // Wrap everything in a body group so suspension can tilt the whole car.
+    this.body = new THREE.Group();
+    this.body.name = 'body';
+    for (const ch of [...this.root.children]) this.body.add(ch);
+    this.root.add(this.body);
+    this.wheels = this.built.wheels;
+    this.steerWheels = this.built.steerWheels;
+    // Steer (Y) first, then spin (X) around the wheel's own axle. With the default
+    // XYZ order the spin axis tilts whenever the wheel is steered and the tire wobbles.
+    for (const w of this.wheels) w.rotation.order = 'YXZ';
+    this.height = new THREE.Box3().setFromObject(this.root).getSize(new THREE.Vector3()).y || 1.4;
+    this.wheelR = this.measureWheelRadius();
+    this.maxHealth = def.health ?? 1000;
+    this.health = this.maxHealth;
+    this.stats = tunedStats(def, this.upgrades);
+    this.collectSlots();
   }
 
-  place(x: number, z: number, yaw: number): void {
-    this.position.set(x, this.def.kind === 'boat' ? -0.35 : 0, z);
+  private measureWheelRadius(): number {
+    if (!this.wheels.length) return 0.36;
+    this.root.updateMatrixWorld(true);
+    const b = new THREE.Box3().setFromObject(this.wheels[0]);
+    const s = b.getSize(new THREE.Vector3());
+    const r = Math.max(s.y, s.z) / 2;
+    return r > 0.1 && r < 1.2 ? r : 0.36;
+  }
+
+  private collectSlots(): void {
+    const body = paint(this.color);
+    this.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mats.forEach((m, index) => {
+        if (m === body) this.paintSlots.push({ mesh, index });
+        else if (m === rimMat) this.rimSlots.push({ mesh, index });
+        else if (m === glassMat) this.glassSlots.push({ mesh, index });
+      });
+    });
+  }
+
+  get medium(): Medium {
+    return mediumOf(this.def);
+  }
+
+  get dead(): boolean {
+    return this.health <= 0;
+  }
+
+  get healthState(): HealthState {
+    return healthState(this.health, this.maxHealth);
+  }
+
+  /** Visual body pitch (radians, + = nose down) for effects/HUD. */
+  get bodyPitch(): number {
+    return this.pitch;
+  }
+
+  setUpgrades(u: Partial<Upgrades>): void {
+    this.upgrades = sanitizeUpgrades(u);
+    this.stats = tunedStats(this.def, this.upgrades);
+  }
+
+  place(x: number, z: number, yaw: number, y?: number): void {
+    const m = this.medium;
+    this.position.set(x, y ?? (m === 'water' || (m === 'amphibious' && isWater(x, z)) ? WATER_Y : 0), z);
     this.yaw = yaw;
     this.velocity.set(0, 0, 0);
     this.speed = 0;
+    this.yawRate = 0;
+    this.airborne = false;
+    this.airTime = 0;
+    this.pitch = this.roll = this.heave = this.pitchV = this.rollV = this.heaveV = 0;
+    this.lastSafe.copy(this.position);
     this.sync(0);
   }
 
@@ -353,107 +562,607 @@ export class Vehicle {
     return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
   }
 
+  // ------------------------------------------------------------ damage
+
+  /** Apply damage (armor reduces it). Returns hp removed. */
+  damage(amount: number, x = this.position.x, z = this.position.z): number {
+    if (!(amount > 0) || this.health <= 0) return 0;
+    const before = this.health;
+    this.health = applyDamage(this.health, amount);
+    const d = before - this.health;
+    if (d > 0) this.onDamage?.(d, x, z);
+    return d;
+  }
+
+  repair(): void {
+    this.health = this.maxHealth;
+    this.engineOn = true;
+    this.resetDents();
+  }
+
+  /** Push vertices near a world point inward (cheap dents; player car only). */
+  dent(px: number, py: number, pz: number, amount: number): void {
+    if (!this.dentable || amount <= 0.002 || this.dentTotal > 3) return;
+    const a = Math.min(0.12, amount);
+    this.dentTotal += a;
+    const wheelSet = new Set<THREE.Object3D>();
+    for (const w of this.wheels) w.traverse((o) => wheelSet.add(o));
+    this.root.updateMatrixWorld(true);
+    this.body.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || wheelSet.has(mesh) || this.dentTotal > 3) return;
+      const ws = mesh.getWorldScale(_q).x || 1;
+      _v.set(px, py, pz);
+      mesh.worldToLocal(_v);
+      const g0 = mesh.geometry;
+      if (!g0.boundingSphere) g0.computeBoundingSphere();
+      const bs = g0.boundingSphere!;
+      const rad = 0.9 / ws;
+      if (bs.center.distanceTo(_v) > bs.radius + rad) return;
+      if (!this.dents.has(mesh)) {
+        this.dents.set(mesh, g0);
+        mesh.geometry = g0.clone();
+      }
+      const pos = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const cx = bs.center.x, cy = bs.center.y, cz = bs.center.z;
+      let moved = false;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const dx = x - _v.x, dy = y - _v.y, dz = z - _v.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > rad * rad) continue;
+        const f = 1 - Math.sqrt(d2) / rad;
+        const tx = cx - x, ty = cy - y, tz = cz - z;
+        const tl = Math.hypot(tx, ty, tz) || 1;
+        const push = (a / ws) * f * f;
+        pos.setXYZ(i, x + (tx / tl) * push, y + (ty / tl) * push * 0.5, z + (tz / tl) * push);
+        moved = true;
+      }
+      if (moved) {
+        pos.needsUpdate = true;
+        mesh.geometry.computeVertexNormals();
+      }
+    });
+  }
+
+  resetDents(): void {
+    for (const [mesh, g] of this.dents) {
+      mesh.geometry.dispose();
+      mesh.geometry = g;
+    }
+    this.dents.clear();
+    this.dentTotal = 0;
+  }
+
+  // ------------------------------------------------------------ look & panels
+
+  applyLook(look: Look): void {
+    this.look = { ...look };
+    this.color = look.color;
+    const p = customPaint(look.color, look.finish);
+    for (const s of this.paintSlots) setSlot(s, p);
+    const rim = look.wheel ? new THREE.MeshStandardMaterial({ color: look.wheel, metalness: 0.85, roughness: 0.25 }) : rimMat;
+    for (const s of this.rimSlots) setSlot(s, rim);
+    const t = Math.max(0, Math.min(3, Math.round(look.tint)));
+    const glass = t === 0 ? glassMat : glassMat.clone();
+    if (t > 0) {
+      glass.color.set(['#16202e', '#0e131c', '#07090e', '#020203'][t]);
+      glass.opacity = 0.88 + t * 0.035;
+    }
+    for (const s of this.glassSlots) setSlot(s, glass);
+    for (const k of Object.keys(this.panels) as PanelId[]) {
+      const pv = this.panels[k].pivot;
+      if (pv) pv.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.material = p; });
+    }
+  }
+
+  isPanelOpen(id: PanelId): boolean {
+    return this.panels[id].open;
+  }
+
+  setPanel(id: PanelId, open: boolean): void {
+    const p = this.panels[id];
+    p.open = open;
+    if (open && !p.pivot) p.pivot = this.makePanel(id);
+  }
+
+  private makePanel(id: PanelId): THREE.Group {
+    const W = this.def.width, L = this.def.length;
+    const mat = this.paintSlots.length ? (materialOf(this.paintSlots[0]) ?? paint(this.color)) : paint(this.color);
+    const pivot = new THREE.Group();
+    let panel: THREE.Mesh;
+    const top = Math.max(0.9, Math.min(1.3, this.height * 0.62));
+    if (id === 'doorL' || id === 'doorR') {
+      const s = id === 'doorL' ? 1 : -1;
+      pivot.position.set(s * (W / 2 + 0.02), 0.45, 0.65);
+      panel = new THREE.Mesh(new THREE.BoxGeometry(0.06, top - 0.45, 1.15), mat);
+      panel.position.set(0, (top - 0.45) / 2, -0.575);
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.38, 0.9), glassMat);
+      win.position.set(0, top - 0.45 + 0.19, -0.5);
+      pivot.add(win);
+    } else if (id === 'hood') {
+      pivot.position.set(0, top - 0.05, L / 2 - 1.35);
+      panel = new THREE.Mesh(new THREE.BoxGeometry(W - 0.25, 0.05, 1.2), mat);
+      panel.position.set(0, 0, 0.6);
+    } else {
+      pivot.position.set(0, top + 0.05, -L / 2 + 1.1);
+      panel = new THREE.Mesh(new THREE.BoxGeometry(W - 0.25, 0.05, 1.0), mat);
+      panel.position.set(0, 0, -0.5);
+    }
+    panel.castShadow = true;
+    pivot.add(panel);
+    pivot.visible = false;
+    this.body.add(pivot);
+    return pivot;
+  }
+
+  private animatePanels(dt: number): void {
+    for (const k of Object.keys(this.panels) as PanelId[]) {
+      const p = this.panels[k];
+      if (!p.pivot) continue;
+      const target = p.open ? 1 : 0;
+      p.angle += (target - p.angle) * Math.min(1, dt * 5);
+      p.pivot.visible = p.angle > 0.03;
+      const a = p.angle;
+      if (k === 'doorL') p.pivot.rotation.y = a * 1.05;
+      else if (k === 'doorR') p.pivot.rotation.y = -a * 1.05;
+      else if (k === 'hood') p.pivot.rotation.x = -a * 0.95;
+      else p.pivot.rotation.x = a * 1.0;
+    }
+  }
+
+  /** Local seat point → world (driver or passenger). */
+  seatWorld(out: THREE.Vector3, passenger = false): THREE.Vector3 {
+    const s = (passenger ? this.def.passengerSeat : this.def.seat) ?? [0.4, 0.5, 0];
+    out.set(s[0], s[1], s[2]);
+    this.body.updateMatrixWorld(true);
+    return this.body.localToWorld(out);
+  }
+
+  /** Visual body rotation (for seating riders). */
+  get bodyRoll(): number {
+    return this.roll + this.lean;
+  }
+
+  /** World position of a local point on the (tilted) body. */
+  localToWorld(x: number, y: number, z: number, out: THREE.Vector3): THREE.Vector3 {
+    out.set(x, y, z);
+    this.body.updateMatrixWorld(true);
+    return this.body.localToWorld(out);
+  }
+
+  // ------------------------------------------------------------ physics
+
+  private groundAt(world: CollisionWorld, x: number, z: number, y: number): number {
+    return Math.max(world.groundHeight(x, z, y + 0.5), rampHeightAt(x, z));
+  }
+
   update(dt: number, world: CollisionWorld): void {
-    const d = this.def;
-    const c = this.controls;
-    const f = this.forward;
-    const vFwd = this.velocity.dot(f);
-    const lat = this.velocity.clone().addScaledVector(f, -vFwd);
-    const maxSpeed = d.maxSpeed * this.speedMult;
-
-    let fwdSpeed = vFwd;
-    if (c.throttle > 0) {
-      if (fwdSpeed < -0.5) fwdSpeed += d.brake * dt;
-      else fwdSpeed += d.accel * c.throttle * (1 - Math.max(0, fwdSpeed) / maxSpeed) * dt * 1.6;
-    } else if (c.throttle < 0) {
-      if (fwdSpeed > 0.5) fwdSpeed -= d.brake * dt;
-      else fwdSpeed = Math.max(-maxSpeed * 0.35, fwdSpeed - d.accel * 0.6 * dt);
-    } else {
-      fwdSpeed *= Math.max(0, 1 - dt * (d.kind === 'boat' ? 0.5 : 0.35));
-      if (Math.abs(fwdSpeed) < 0.15) fwdSpeed = 0;
-    }
-    if (c.handbrake) fwdSpeed *= Math.max(0, 1 - dt * 1.6);
-
-    // steering scales with speed, reversed when backing up
-    const steerFactor = Math.min(1, Math.abs(fwdSpeed) / 7) * Math.sign(fwdSpeed || 1);
-    const grip = c.handbrake ? d.grip * 0.18 : d.grip;
-    this.yaw += c.steer * d.turn * steerFactor * dt * (c.handbrake ? 1.35 : 1) * (1 - Math.min(0.45, Math.abs(fwdSpeed) / maxSpeed * 0.45));
-
-    lat.multiplyScalar(Math.max(0, 1 - grip * dt));
-    const nf = this.forward;
-    this.velocity.copy(nf).multiplyScalar(fwdSpeed).add(lat);
-    this.speed = fwdSpeed;
-
-    this.position.x += this.velocity.x * dt;
-    this.position.z += this.velocity.z * dt;
-
-    if (d.kind === 'boat') {
-      // stay on water
-      if (!isWater(this.position.x, this.position.z)) {
-        this.position.x -= this.velocity.x * dt * 1.5;
-        this.position.z -= this.velocity.z * dt * 1.5;
-        this.velocity.multiplyScalar(-0.3);
-        this.onImpact?.(Math.abs(fwdSpeed) / 10);
-      }
-      this.bob += dt * 2;
-      this.position.y = -0.35 + Math.sin(this.bob) * 0.08;
-    } else {
-      // two contact circles along the body
-      const half = Math.max(0, d.length / 2 - d.width / 2);
-      const r = d.width / 2 + 0.05;
-      let impact = 0;
-      for (const o of half > 0 ? [half, -half] : [0]) {
-        const p = { x: this.position.x + nf.x * o, z: this.position.z + nf.z * o };
-        const before = { ...p };
-        const n = world.resolveCircle(p, r, this.position.y, 1.4, true, 0.45);
-        if (n) {
-          this.position.x += p.x - before.x;
-          this.position.z += p.z - before.z;
-          const vn = this.velocity.x * n.nx + this.velocity.z * n.nz;
-          if (vn < 0) {
-            this.velocity.x -= n.nx * vn * 1.3;
-            this.velocity.z -= n.nz * vn * 1.3;
-            impact = Math.max(impact, -vn);
-          }
-        }
-      }
-      if (impact > 0) {
-        this.velocity.multiplyScalar(0.75);
-        this.speed = this.velocity.dot(this.forward);
-        if (impact > 3) this.onImpact?.(impact / 12);
-      }
-      // keep cars out of the sea
-      if (isWater(this.position.x, this.position.z)) {
-        this.position.x -= this.velocity.x * dt * 2;
-        this.position.z -= this.velocity.z * dt * 2;
-        this.velocity.multiplyScalar(-0.2);
-      }
-      this.position.y = world.groundHeight(this.position.x, this.position.z, this.position.y + 0.3);
-    }
+    if (!(dt > 0)) return;
+    dt = Math.min(dt, 0.05);
+    const m = this.medium;
+    if (m === 'air') this.updateAir(dt, world);
+    else if (m === 'water' || (m === 'amphibious' && (isWater(this.position.x, this.position.z) || this.inWater && !isSand(this.position.x, this.position.z)))) this.updateWater(dt, world);
+    else this.updateLand(dt, world);
+    // stability guard: never let NaN/Infinity escape into the world
+    const p = this.position, v = this.velocity;
+    if (!Number.isFinite(p.x + p.y + p.z + v.x + v.y + v.z + this.yaw)) {
+      p.copy(this.lastSafe);
+      v.set(0, 0, 0);
+      this.speed = 0;
+      this.yawRate = 0;
+      if (!Number.isFinite(this.yaw)) this.yaw = 0;
+    } else this.lastSafe.copy(p);
     this.sync(dt);
   }
 
+  /** Engine force direction & strength this frame (0 when dead or off). */
+  private throttleInput(): number {
+    const t = this.controls.throttle;
+    if (!Number.isFinite(t)) return 0;
+    if ((!this.engineOn || this.health <= 0) && !this.def.pedal) return Math.min(0, t) * 0.0001; // no drive; brake handled separately
+    return Math.max(-1, Math.min(1, t));
+  }
+
+  /** Shared longitudinal model. Returns the new forward speed. */
+  private longitudinal(vF: number, dt: number, maxV: number, accel: number, drag: number): number {
+    const c = this.controls;
+    const t = this.throttleInput();
+    const rawT = Number.isFinite(c.throttle) ? c.throttle : 0;
+    const brake = this.stats.brake;
+    this.braking = false;
+    if (t > 0) {
+      if (vF < -0.5) { vF = Math.min(0, vF + brake * dt); this.braking = true; }
+      else vF += accel * t * torqueCurve(Math.max(0, vF) / maxV) * dt;
+    } else if (rawT < 0) {
+      if (vF > 0.5) { vF = Math.max(0, vF - brake * dt); this.braking = true; }
+      else if (t < 0) vF = Math.max(-maxV * 0.35, vF - accel * 0.6 * dt);
+    } else {
+      vF *= Math.max(0, 1 - dt * drag);
+      if (Math.abs(vF) < 0.15) vF = 0;
+    }
+    if (vF > maxV) vF += (maxV - vF) * Math.min(1, dt * 2);
+    if (vF < -maxV * 0.4) vF = -maxV * 0.4;
+    if (c.handbrake) {
+      vF *= Math.max(0, 1 - dt * (this.medium === 'land' ? 1.2 : 0.8));
+      if (Math.abs(vF) > 2) this.braking = true;
+    }
+    return vF;
+  }
+
+  private updateLand(dt: number, world: CollisionWorld): void {
+    const d = this.def, c = this.controls, s = this.stats;
+    const p = this.position, vel = this.velocity;
+    let fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const vF0 = vel.x * fx + vel.z * fz;
+    let latX = vel.x - fx * vF0, latZ = vel.z - fz * vF0;
+    const nitro = this.nitroActive && this.upgrades.nitro && this.nitro > 0 && this.engineOn && this.health > 0;
+    const maxV = s.maxSpeed * this.speedMult * (nitro ? 1.3 : 1);
+    const amphib = this.medium === 'amphibious';
+    this.onSand = isSand(p.x, p.z) || amphib;
+    const surf = this.onSand ? (amphib ? 0.9 : d.offroad ?? 0.75) : 1;
+    let vF = vF0;
+    const steerIn = Number.isFinite(c.steer) ? Math.max(-1, Math.min(1, c.steer)) : 0;
+
+    if (!this.airborne) {
+      const sandDrag = this.onSand ? (amphib ? 1.4 : Math.max(0, 1.1 - (d.offroad ?? 0.75)) * 1.2) : 0;
+      vF = this.longitudinal(vF, dt, maxV * (this.onSand && !amphib ? Math.min(1, (d.offroad ?? 0.75) + 0.15) : 1), s.accel * (nitro ? 1.9 : 1), 0.35 + sandDrag);
+      vF *= Math.max(0, 1 - dt * 0.0016 * vF * Math.sign(vF)); // aero
+      // steering: speed-scaled, reversed when backing up, tighter at low speed
+      const speedFactor = Math.min(1, Math.abs(vF) / 6) * (vF < -0.2 ? -1 : 1);
+      const highSpeed = 1 - Math.min(0.5, (Math.abs(vF) / Math.max(1, s.maxSpeed)) * 0.5);
+      const latSpeed = Math.hypot(latX, latZ);
+      this.slipAngle = Math.atan2(latSpeed, Math.abs(vF) + 0.5);
+      const drifting = (c.handbrake && Math.abs(vF) > 7) || this.slipAngle > 0.22;
+      const target = steerIn * s.turn * speedFactor * highSpeed * (c.handbrake ? 1.45 : 1) * (drifting ? 1.15 : 1);
+      this.yawRate += (target - this.yawRate) * Math.min(1, dt * 9);
+      this.yaw += this.yawRate * dt;
+      // engine/brake force acts along the old heading; momentum keeps its direction while the body rotates
+      vel.x += fx * (vF - vF0);
+      vel.z += fz * (vF - vF0);
+      // tire grip curve: lateral speed bleeds off; less while sliding/handbraking
+      const g = s.grip * gripCurve(this.slipAngle) * surf * (c.handbrake ? 0.16 : 1) * (d.twoWheel ? 1.2 : 1);
+      const keep = Math.max(0, 1 - g * dt);
+      fx = Math.sin(this.yaw); fz = Math.cos(this.yaw);
+      const vF2 = vel.x * fx + vel.z * fz;
+      latX = (vel.x - fx * vF2) * keep; latZ = (vel.z - fz * vF2) * keep;
+      vel.x = fx * vF2 + latX;
+      vel.z = fz * vF2 + latZ;
+      this.slip = Math.hypot(latX, latZ);
+    } else {
+      // in the air: keep momentum, light air control
+      this.yawRate *= Math.max(0, 1 - dt * 1.5);
+      this.yaw += (this.yawRate + steerIn * 0.5) * dt;
+      vel.x *= 1 - dt * 0.02;
+      vel.z *= 1 - dt * 0.02;
+      this.slip = 0;
+      this.braking = false;
+    }
+    this.speed = vel.x * Math.sin(this.yaw) + vel.z * Math.cos(this.yaw);
+    if (nitro) this.nitro = Math.max(0, this.nitro - dt * 0.22);
+    else if (this.upgrades.nitro) this.nitro = Math.min(1, this.nitro + dt * 0.05);
+    // hard cap (stability)
+    const hs = Math.hypot(vel.x, vel.z), cap = s.maxSpeed * 1.6 + 5;
+    if (hs > cap) { vel.x *= cap / hs; vel.z *= cap / hs; }
+
+    // integrate horizontally
+    const ox = p.x, oz = p.z, oy = p.y;
+    p.x += vel.x * dt;
+    p.z += vel.z * dt;
+
+    // ground following / airborne
+    const gh = this.groundAt(world, p.x, p.z, p.y);
+    if (!this.airborne) {
+      if (gh > p.y + 0.62) {
+        // a wall-like step (ramp side, tall ledge): block it
+        p.x = ox; p.z = oz;
+        const imp = Math.hypot(vel.x, vel.z);
+        vel.x *= -0.25; vel.z *= -0.25;
+        this.speed *= -0.25;
+        if (imp > 3) { this.onImpact?.(imp / 12); this.damage(impactDamage(imp * 0.8, s.armor)); }
+      } else if (gh < p.y - 0.38) {
+        // ground fell away (ramp lip, roof edge, big drop)
+        const rampBefore = rampHeightAt(ox, oz);
+        const vy = rampBefore > 0.3 ? Math.max(0, (rampBefore - rampHeightAt(ox - vel.x * dt, oz - vel.z * dt)) / dt) : 0;
+        this.airborne = true;
+        this.airTime = 0;
+        vel.y = Math.min(25, vy);
+        const r = rampAt(ox, oz);
+        this.launchRamp = r && rampBefore > r.height * 0.7 ? r.id : null;
+        this.launchPos.x = ox; this.launchPos.z = oz;
+        if (vel.y > 1 || this.launchRamp) this.onLaunch?.(this.launchRamp);
+      } else {
+        const step = gh - p.y;
+        if (step > 0.06 && !rampAt(p.x, p.z)) this.heaveV -= Math.min(1.6, step * Math.abs(vF) * 0.7); // curb bump
+        else if (step < -0.06) this.heaveV += Math.min(0.8, -step * 2);
+        p.y = gh;
+        vel.y = 0;
+      }
+    }
+    if (this.airborne) {
+      vel.y -= GRAVITY * dt;
+      if (vel.y < -60) vel.y = -60;
+      p.y = oy + vel.y * dt;
+      this.airTime += dt;
+      const gh2 = this.groundAt(world, p.x, p.z, Math.max(p.y, oy));
+      if (p.y <= gh2) {
+        const impact = -vel.y;
+        p.y = gh2;
+        vel.y = 0;
+        this.airborne = false;
+        this.heaveV -= Math.min(3, impact * 0.28);
+        this.pitchV += (this.pitch > 0 ? -1 : 1) * Math.min(2, impact * 0.08);
+        const dmg = landingDamage(impact, s.armor);
+        if (dmg > 0) this.damage(dmg);
+        if (impact > 6) this.onImpact?.(Math.min(1, impact / 25));
+        this.onLand?.(impact, this.airTime);
+        this.airTime = 0;
+      }
+    }
+
+    // building collisions: contact circles along the body
+    const half = Math.max(0, d.length / 2 - d.width / 2);
+    const r = d.width / 2 + 0.05;
+    let impact = 0, cx = 0, cz = 0;
+    fx = Math.sin(this.yaw); fz = Math.cos(this.yaw);
+    for (let k = 0; k < (half > 0 ? 2 : 1); k++) {
+      const o = half > 0 ? (k === 0 ? half : -half) : 0;
+      const pt = { x: p.x + fx * o, z: p.z + fz * o };
+      const bx = pt.x, bz = pt.z;
+      const n = world.resolveCircle(pt, r, p.y, 1.4, true, 0.45);
+      if (n) {
+        p.x += pt.x - bx;
+        p.z += pt.z - bz;
+        const vn = vel.x * n.nx + vel.z * n.nz;
+        if (vn < 0) {
+          vel.x -= n.nx * vn * 1.3;
+          vel.z -= n.nz * vn * 1.3;
+          if (-vn > impact) { impact = -vn; cx = pt.x - n.nx * r; cz = pt.z - n.nz * r; }
+        }
+      }
+    }
+    if (impact > 0) {
+      vel.x *= 0.75; vel.z *= 0.75;
+      this.speed = vel.x * fx + vel.z * fz;
+      if (impact > 3) {
+        this.onImpact?.(impact / 12);
+        const dmg = impactDamage(impact, s.armor);
+        this.damage(dmg, cx, cz);
+        this.dent(cx, p.y + 0.7, cz, dmg * 0.0012);
+        this.pitchV += (impact * 0.05) * (Math.sign(this.speed) || 1);
+      }
+    }
+    // keep land vehicles out of the sea (airboats may enter)
+    if (!amphib && isWater(p.x, p.z) && p.y < 1) {
+      p.x -= vel.x * dt * 2;
+      p.z -= vel.z * dt * 2;
+      vel.x *= -0.2; vel.z *= -0.2;
+    }
+    if (amphib && isWater(p.x, p.z)) { this.inWater = true; p.y = WATER_Y; }
+    else if (amphib) this.inWater = false;
+    this.suspension(dt, vF0);
+  }
+
+  /** Weight transfer → body pitch & roll on damped springs; heave from bumps. */
+  private suspension(dt: number, prevFwd: number): void {
+    const stiff = this.stats.stiffness;
+    const aLong = (this.speed - prevFwd) / dt;
+    const aLat = this.speed * this.yawRate;
+    let pitchT = 0, rollT = 0;
+    if (!this.airborne) {
+      pitchT = Math.max(-0.075, Math.min(0.085, -aLong * 0.0075 / stiff));
+      rollT = this.def.twoWheel ? 0 : Math.max(-0.08, Math.min(0.08, aLat * 0.0042 / stiff));
+    } else {
+      pitchT = Math.max(-0.3, Math.min(0.35, -this.velocity.y * 0.022));
+    }
+    const k = 70 * stiff, c = 9 * Math.sqrt(stiff);
+    [this.pitch, this.pitchV] = springStep(this.pitch, this.pitchV, pitchT, this.airborne ? 8 : k, this.airborne ? 4 : c, dt);
+    [this.roll, this.rollV] = springStep(this.roll, this.rollV, rollT, k, c, dt);
+    [this.heave, this.heaveV] = springStep(this.heave, this.heaveV, 0, 120 * stiff, 11, dt);
+    this.pitch = Math.max(-0.6, Math.min(0.6, this.pitch));
+    this.roll = Math.max(-0.3, Math.min(0.3, this.roll));
+    this.heave = Math.max(-0.25, Math.min(0.25, this.heave));
+    // wheelies (bikes): Shift + throttle lifts the front
+    if (this.def.canWheelie) {
+      const want = this.leanBack && !this.airborne && this.controls.throttle > 0 && this.speed > 1.5 ? (this.def.kind === 'dirtbike' ? 0.62 : 0.5) : 0;
+      this.wheelie += (want - this.wheelie) * Math.min(1, dt * (want > this.wheelie ? 2.2 : 4));
+      if (this.wheelie < 0.002) this.wheelie = 0;
+    }
+  }
+
+  private updateWater(dt: number, world: CollisionWorld): void {
+    const d = this.def, c = this.controls, s = this.stats;
+    const p = this.position, vel = this.velocity;
+    let fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const vF0 = vel.x * fx + vel.z * fz;
+    let latX = vel.x - fx * vF0, latZ = vel.z - fz * vF0;
+    const nitro = this.nitroActive && this.upgrades.nitro && this.nitro > 0 && this.engineOn && this.health > 0;
+    const maxV = s.maxSpeed * this.speedMult * (nitro ? 1.25 : 1);
+    let vF = this.longitudinal(vF0, dt, maxV, s.accel * (nitro ? 1.7 : 1), 0.5);
+    const steerIn = Number.isFinite(c.steer) ? Math.max(-1, Math.min(1, c.steer)) : 0;
+    const speedFactor = Math.min(1, (Math.abs(vF) + (d.pedal ? 1.2 : 0)) / 5) * (vF < -0.2 ? -1 : 1);
+    const target = steerIn * s.turn * speedFactor * (c.handbrake ? 1.3 : 1);
+    this.yawRate += (target - this.yawRate) * Math.min(1, dt * 3.5);
+    this.yaw += this.yawRate * dt;
+    const keep = Math.max(0, 1 - s.grip * (c.handbrake ? 0.5 : 1) * dt);
+    vel.x += fx * (vF - vF0);
+    vel.z += fz * (vF - vF0);
+    fx = Math.sin(this.yaw); fz = Math.cos(this.yaw);
+    vF = vel.x * fx + vel.z * fz;
+    latX = (vel.x - fx * vF) * keep; latZ = (vel.z - fz * vF) * keep;
+    vel.x = fx * vF + latX;
+    vel.z = fz * vF + latZ;
+    vel.y = 0;
+    this.slip = Math.hypot(latX, latZ);
+    this.slipAngle = Math.atan2(this.slip, Math.abs(vF) + 0.5);
+    this.speed = vF;
+    if (nitro) this.nitro = Math.max(0, this.nitro - dt * 0.22);
+    else if (this.upgrades.nitro) this.nitro = Math.min(1, this.nitro + dt * 0.05);
+    this.airborne = false;
+    p.x += vel.x * dt;
+    p.z += vel.z * dt;
+    this.inWater = isWater(p.x, p.z);
+    if (!this.inWater) {
+      if (this.medium === 'amphibious' && isSand(p.x, p.z)) {
+        // airboat slides up onto the sand
+        p.y = Math.max(0, this.groundAt(world, p.x, p.z, 0));
+      } else {
+        p.x -= vel.x * dt * 1.5;
+        p.z -= vel.z * dt * 1.5;
+        vel.x *= -0.3; vel.z *= -0.3;
+        this.speed *= -0.3;
+        const imp = Math.abs(vF);
+        if (imp > 3) { this.onImpact?.(imp / 10); this.damage(impactDamage(imp * 0.7, s.armor)); }
+        this.inWater = true;
+      }
+    }
+    // piers, quay walls
+    const pt = { x: p.x, z: p.z };
+    const n = world.resolveCircle(pt, d.width / 2 + 0.2, WATER_Y, 1.5, true, 0.6);
+    if (n) {
+      p.x = pt.x; p.z = pt.z;
+      const vn = vel.x * n.nx + vel.z * n.nz;
+      if (vn < 0) {
+        vel.x -= n.nx * vn * 1.3; vel.z -= n.nz * vn * 1.3;
+        if (-vn > 3) { this.onImpact?.(-vn / 12); this.damage(impactDamage(-vn, s.armor)); }
+      }
+    }
+    if (this.inWater) {
+      this.bob += dt * (2 + Math.abs(vF) * 0.05);
+      const plane = Math.min(0.12, Math.abs(vF) * 0.004);
+      p.y = WATER_Y + Math.sin(this.bob) * (d.kind === 'kayak' ? 0.04 : 0.08) + plane;
+    }
+    if (d.pedal) this.paddleT += dt * (Math.abs(c.throttle) > 0 ? 3.2 : Math.abs(steerIn) > 0 ? 2 : 0);
+    // visual: nose lifts with speed, hull rocks on the swell
+    const pitchT = -Math.min(0.12, Math.abs(vF) / 220) + Math.sin(this.bob * 1.3) * 0.02;
+    const rollT = Math.sin(this.bob) * 0.03 + (d.twoWheel ? 0 : -this.yawRate * Math.abs(vF) * 0.004);
+    [this.pitch, this.pitchV] = springStep(this.pitch, this.pitchV, pitchT, 30, 6, dt);
+    [this.roll, this.rollV] = springStep(this.roll, this.rollV, rollT, 30, 6, dt);
+    this.heave *= 1 - Math.min(1, dt * 4);
+  }
+
+  private updateAir(dt: number, world: CollisionWorld): void {
+    const p = this.position, vel = this.velocity, s = this.stats;
+    const c = this.controls;
+    const fl = this.flight ?? { lift: Number.isFinite(c.throttle) ? c.throttle : 0, yaw: Number.isFinite(c.steer) ? c.steer : 0, pitch: 0, roll: 0 };
+    this.flight = null;
+    const cl = (x: number) => (Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0);
+    const lift = cl(fl.lift), yawIn = cl(fl.yaw), pitchIn = cl(fl.pitch), rollIn = cl(fl.roll);
+    const powered = this.driver !== null && this.engineOn && this.health > 0;
+    this.spool += ((powered ? 1 : 0) - this.spool) * Math.min(1, dt * (powered ? 0.6 : 0.35));
+    const gh = this.groundAt(world, p.x, p.z, p.y);
+    const grounded = p.y <= gh + 0.03;
+    // collective: hover thrust balances gravity at full spool, W/S climbs/descends
+    let thrust = this.spool * (GRAVITY + lift * 11);
+    if (this.spool < 0.55) thrust *= 0.6;
+    vel.y += (thrust - GRAVITY) * dt;
+    vel.y *= Math.max(0, 1 - dt * 0.9);
+    if (p.y > HELI_CEILING && vel.y > 0) vel.y = 0;
+    // cyclic tilt → horizontal acceleration
+    const airborneOk = !grounded || lift > 0.1;
+    this.tiltF += ((airborneOk ? pitchIn * 0.36 : 0) * this.spool - this.tiltF) * Math.min(1, dt * 2.6);
+    this.tiltS += ((airborneOk ? rollIn * 0.32 : 0) * this.spool - this.tiltS) * Math.min(1, dt * 2.6);
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);
+    const aF = Math.tan(this.tiltF) * GRAVITY * 1.15, aS = Math.tan(this.tiltS) * GRAVITY * 1.15;
+    vel.x += (fx * aF + rx * aS) * dt;
+    vel.z += (fz * aF + rz * aS) * dt;
+    vel.x *= Math.max(0, 1 - dt * 0.38);
+    vel.z *= Math.max(0, 1 - dt * 0.38);
+    const hs = Math.hypot(vel.x, vel.z), cap = s.maxSpeed * this.speedMult;
+    if (hs > cap) { vel.x *= cap / hs; vel.z *= cap / hs; }
+    const yawT = yawIn * s.turn * this.spool * (grounded ? 0.25 : 1);
+    this.yawRate += (yawT - this.yawRate) * Math.min(1, dt * 2.5);
+    this.yaw += this.yawRate * dt;
+    p.x += vel.x * dt;
+    p.z += vel.z * dt;
+    p.y += vel.y * dt;
+    this.airborne = !grounded;
+    const gh2 = this.groundAt(world, p.x, p.z, Math.max(p.y, gh));
+    if (p.y <= gh2) {
+      const impact = -vel.y;
+      p.y = gh2;
+      if (vel.y < 0) vel.y = 0;
+      vel.x *= Math.max(0, 1 - dt * 5);
+      vel.z *= Math.max(0, 1 - dt * 5);
+      if (impact > 7) {
+        this.damage(landingDamage(impact + 4, s.armor));
+        this.onImpact?.(Math.min(1, impact / 20));
+        this.heaveV -= Math.min(2, impact * 0.2);
+      }
+      this.airborne = false;
+    }
+    // water: ditching
+    if (isWater(p.x, p.z) && p.y < WATER_Y + 0.4) {
+      p.y = WATER_Y + 0.4;
+      if (vel.y < 0) vel.y = 0;
+      vel.x *= 1 - Math.min(1, dt * 3);
+      vel.z *= 1 - Math.min(1, dt * 3);
+    }
+    // buildings: hull circle + rotor disc
+    const pt = { x: p.x, z: p.z };
+    const n = world.resolveCircle(pt, 1.7, p.y, 3, true, 0.25);
+    if (n) {
+      p.x = pt.x; p.z = pt.z;
+      const vn = vel.x * n.nx + vel.z * n.nz;
+      if (vn < 0) {
+        vel.x -= n.nx * vn * 1.4; vel.z -= n.nz * vn * 1.4;
+        if (-vn > 3) { this.onImpact?.(-vn / 12); this.damage(impactDamage(-vn * 1.2, s.armor)); }
+      }
+    }
+    this.speed = vel.x * fx + vel.z * fz;
+    this.slip = 0;
+    this.pitch = this.tiltF;
+    this.roll = this.tiltS;
+    [this.heave, this.heaveV] = springStep(this.heave, this.heaveV, 0, 80, 9, dt);
+  }
+
+  // ------------------------------------------------------------ visuals
+
   sync(dt: number): void {
+    const d = this.def;
     this.root.position.copy(this.position);
     this.root.rotation.set(0, this.yaw, 0);
-    this.wheelSpin += (this.speed * dt) / 0.36;
+    this.wheelSpin += (this.speed * dt) / this.wheelR;
+    if (!Number.isFinite(this.wheelSpin) || Math.abs(this.wheelSpin) > 1e5) this.wheelSpin = 0;
     for (const w of this.wheels) w.rotation.x = this.wheelSpin;
     for (const w of this.steerWheels) w.rotation.y = this.controls.steer * 0.45;
-    if (this.def.kind === 'bike') {
-      const target = -this.controls.steer * Math.min(1, Math.abs(this.speed) / 12) * 0.45;
+    const b = this.body;
+    if (d.twoWheel) {
+      const target = -this.controls.steer * Math.min(1, Math.abs(this.speed) / (d.kind === 'bicycle' ? 6 : 12)) * (d.kind === 'jetski' ? 0.35 : 0.45);
       this.lean += (target - this.lean) * Math.min(1, dt * 6);
-      this.root.rotation.z = this.lean;
-    } else if (this.def.kind === 'boat') {
-      this.root.rotation.x = -Math.min(0.12, Math.abs(this.speed) / 200) + Math.sin(this.bob * 1.3) * 0.02;
-      this.root.rotation.z = Math.sin(this.bob) * 0.03;
-    } else {
-      // subtle body roll on turns
-      const roll = this.controls.steer * Math.min(1, Math.abs(this.speed) / 20) * 0.04;
-      this.root.children[0].rotation.z = roll;
+    } else this.lean = 0;
+    // wheelie pivots about the rear axle: lift the body so the rear tire stays planted
+    const rearArm = Math.max(0.3, d.length / 2 - 0.35);
+    b.position.set(0, this.heave - this.stats.lower + Math.sin(this.wheelie) * rearArm, -rearArm * (1 - Math.cos(this.wheelie)));
+    b.rotation.set(this.pitch - this.wheelie, 0, this.roll + this.lean);
+    for (const r of this.built.rotors) { this.rotorSpin += dt * this.spool * 28; r.rotation.y = this.rotorSpin; }
+    for (const r of this.built.tailRotors) r.rotation.x = this.rotorSpin * 1.6;
+    const fanOn = this.engineOn && this.health > 0 && this.driver !== null;
+    for (const f of this.built.fans) f.rotation.z += dt * (fanOn ? 8 + Math.abs(this.controls.throttle) * 30 : 0);
+    if (this.built.paddle) {
+      const a = this.paddleT;
+      this.built.paddle.rotation.z = Math.sin(a) * 0.6;
+      this.built.paddle.rotation.y = Math.cos(a) * 0.35;
     }
+    if (this.built.crank) this.built.crank.rotation.x = this.wheelSpin * 0.55;
+    if (dt > 0) this.animatePanels(dt);
   }
 
   get kmh(): number {
     return Math.abs(this.speed) * 3.6;
   }
+}
+
+function setSlot(s: Slot, m: THREE.Material): void {
+  if (Array.isArray(s.mesh.material)) {
+    const arr = s.mesh.material.slice();
+    arr[s.index] = m;
+    s.mesh.material = arr;
+  } else s.mesh.material = m;
+}
+
+function materialOf(s: Slot): THREE.Material | null {
+  const m = s.mesh.material;
+  return Array.isArray(m) ? m[s.index] ?? null : m;
 }

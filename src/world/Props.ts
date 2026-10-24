@@ -85,6 +85,62 @@ export class Props {
     this.streetLights();
     this.beach();
     this.pier();
+    this.foliage();
+  }
+
+  /** Dense tropical shrubs and flowering bougainvillea along sidewalks and lawns. */
+  private foliage(): void {
+    const leaf = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true });
+    const bush = new THREE.IcosahedronGeometry(1, 1);
+    // jitter vertices so every bush reads organic, colour from dark core to bright tips
+    const pos = bush.attributes.position as THREE.BufferAttribute;
+    const cols: number[] = [];
+    for (let i = 0; i < pos.count; i++) {
+      const j = 0.75 + rnd() * 0.45;
+      pos.setXYZ(i, pos.getX(i) * j, Math.max(-0.2, pos.getY(i)) * j * 0.8, pos.getZ(i) * j);
+      const t = (pos.getY(i) + 0.3) / 1.3;
+      cols.push(0.12 + t * 0.15, 0.38 + t * 0.32, 0.14 + t * 0.08);
+    }
+    bush.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    bush.computeVertexNormals();
+    const flower = new THREE.IcosahedronGeometry(0.75, 0);
+    const flowerMat = new THREE.MeshStandardMaterial({ roughness: 0.7, flatShading: true });
+    const spotsB: THREE.Matrix4[] = [];
+    const spotsF: { m: THREE.Matrix4; c: THREE.Color }[] = [];
+    const flowerCols = ['#ff2f8f', '#ff5fb0', '#ff8a3d', '#ffd23f', '#c04dff', '#ff4d6d'];
+    const add = (x: number, z: number, s: number) => {
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, 0.15, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rnd() * 6.3, 0)), new THREE.Vector3(s, s * (0.8 + rnd() * 0.5), s));
+      spotsB.push(m);
+      if (rnd() < 0.45) {
+        const fm = new THREE.Matrix4().compose(new THREE.Vector3(x + (rnd() - 0.5) * 0.6, 0.15 + s * 0.75, z + (rnd() - 0.5) * 0.6), new THREE.Quaternion(), new THREE.Vector3(s * 0.7, s * 0.45, s * 0.7));
+        spotsF.push({ m: fm, c: new THREE.Color(flowerCols[Math.floor(rnd() * flowerCols.length)]) });
+      }
+    };
+    for (const b of buildBlocks()) {
+      // hedge line along the inner edge of each sidewalk
+      for (let x = b.x0 + 6; x < b.x1 - 6; x += 3.2 + rnd() * 2.5) {
+        if (rnd() < 0.55) add(x, b.z0 + 4.2, 0.55 + rnd() * 0.45);
+        if (rnd() < 0.55) add(x, b.z1 - 4.2, 0.55 + rnd() * 0.45);
+      }
+      for (let z = b.z0 + 6; z < b.z1 - 6; z += 3.4 + rnd() * 2.5) {
+        if (rnd() < 0.45) add(b.x0 + 4.2, z, 0.5 + rnd() * 0.4);
+        if (rnd() < 0.45) add(b.x1 - 4.2, z, 0.5 + rnd() * 0.4);
+      }
+    }
+    // beach dune grass clumps
+    for (let i = 0; i < 160; i++) add(BEACH_X + 3 + rnd() * 14, -250 + rnd() * 440, 0.35 + rnd() * 0.35);
+    // keep landmark entrances clear
+    const clear = (m: THREE.Matrix4) => {
+      const p = new THREE.Vector3().setFromMatrixPosition(m);
+      return !(p.x > 100 && p.x < 160 && p.z > -66 && p.z < -14) && !(p.x > 112 && p.x < 160 && p.z > 30 && p.z < 66) && Math.hypot(p.x + 38, p.z + 38) > 30;
+    };
+    const bushes = spotsB.filter(clear);
+    const flowers = spotsF.filter((f) => clear(f.m));
+    const bi = new THREE.InstancedMesh(bush, leaf, bushes.length);
+    bushes.forEach((m, i) => bi.setMatrixAt(i, m));
+    const fi = new THREE.InstancedMesh(flower, flowerMat, flowers.length);
+    flowers.forEach((f, i) => { fi.setMatrixAt(i, f.m); fi.setColorAt(i, f.c); });
+    for (const inst of [bi, fi]) { inst.castShadow = true; inst.receiveShadow = true; this.city.group.add(inst); }
   }
 
   private roadMarkings(): void {

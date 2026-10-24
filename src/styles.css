@@ -126,3 +126,11 @@ button { font-family: inherit; }
 .cx-bar { height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
 .cx-bar > div { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); }
 .cx-kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); }
+
+/* GTA-style: no visible cursor while playing (menus and dialogs bring it back) */
+body.cc-playing, body.cc-playing #game-canvas { cursor: none; }
+.cc-lock-hint {
+  position: fixed; left: 50%; top: 58%; transform: translateX(-50%); z-index: 30; pointer-events: none;
+  background: rgba(0, 0, 0, 0.7); color: #fff; padding: 8px 16px; border-radius: 6px;
+  font: 600 15px Rajdhani, system-ui, sans-serif; letter-spacing: 0.3px; transition: opacity 0.3s;
+}

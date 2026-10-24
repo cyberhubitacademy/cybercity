@@ -17,3 +17,5 @@ export { MockHost } from './host';
 export type { ScriptHost, MaybePromise, MockOptions } from './host';
 export { FORMAT_VERSION, HEADER_SIZE, LIMITS, MAGIC, TAG, crc32 } from './bytecode';
 export * from './cinematic';
+export { COMBAT_HOOKS, DIRECTOR_LINK } from './combatHooks';
+export type { CombatHooks, DirectorLink } from './combatHooks';

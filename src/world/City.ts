@@ -39,6 +39,74 @@ export class CityBuilder {
     this.buildLandmarks();
     this.buildTerminals();
     this.buildBoundary();
+    this.flushBatches();
+  }
+
+  // ---------- instanced detail batches (balconies, AC units, rooftop clutter) ----------
+
+  private batches = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material; mats: THREE.Matrix4[]; shadow: boolean }>();
+
+  /** Queue one instance of a shared mesh; all instances become a single draw call. */
+  batch(key: string, geo: () => THREE.BufferGeometry, mat: () => THREE.Material, x: number, y: number, z: number, rotY = 0, scale = 1, shadow = true): void {
+    let b = this.batches.get(key);
+    if (!b) {
+      b = { geo: geo(), mat: mat(), mats: [], shadow };
+      this.batches.set(key, b);
+    }
+    b.mats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rotY, 0)), new THREE.Vector3(scale, scale, scale)));
+  }
+
+  private flushBatches(): void {
+    for (const b of this.batches.values()) {
+      const inst = new THREE.InstancedMesh(b.geo, b.mat, b.mats.length);
+      b.mats.forEach((m, i) => inst.setMatrixAt(i, m));
+      inst.castShadow = b.shadow;
+      inst.receiveShadow = true;
+      this.group.add(inst);
+    }
+    this.batches.clear();
+  }
+
+  /** Balconies with railings and AC units on a facade facing +x (east), plus rooftop clutter. */
+  private facadeDetail(x1: number, z0: number, z1: number, h: number): void {
+    const slab = () => new THREE.BoxGeometry(1.0, 0.14, 2.4);
+    const rail = () => new THREE.BoxGeometry(0.05, 0.9, 2.4);
+    const ac = () => new THREE.BoxGeometry(0.45, 0.55, 0.8);
+    const white = () => new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: 0.6 });
+    const glassRail = () => new THREE.MeshStandardMaterial({ color: '#bfe9ff', roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.55 });
+    const metal = () => new THREE.MeshStandardMaterial({ color: '#c9ced6', roughness: 0.45, metalness: 0.6 });
+    for (let y = 3.6; y < h - 2; y += 3.6) {
+      for (let z = z0 + 3; z < z1 - 3; z += 5.2) {
+        if (this.rnd() < 0.72) {
+          this.batch('balcony-slab', slab, white, x1 + 0.5, y, z);
+          this.batch('balcony-rail', rail, glassRail, x1 + 0.98, y + 0.52, z, 0, 1, false);
+        } else if (this.rnd() < 0.6) {
+          this.batch('ac-unit', ac, metal, x1 + 0.25, y + 0.9, z + 1.4);
+        }
+      }
+    }
+    this.roofClutter(x1 - 6, z0 + 3, z1 - 3, h);
+  }
+
+  private roofClutter(x: number, z0: number, z1: number, h: number): void {
+    const tank = () => new THREE.CylinderGeometry(0.9, 0.9, 1.6, 12);
+    const box = () => new THREE.BoxGeometry(1.6, 1.0, 1.2);
+    const dish = () => new THREE.CylinderGeometry(0.5, 0.05, 0.25, 10);
+    const mast = () => new THREE.CylinderGeometry(0.04, 0.04, 3.2, 5);
+    const grey = () => new THREE.MeshStandardMaterial({ color: '#d5d8de', roughness: 0.5, metalness: 0.4 });
+    const dark = () => new THREE.MeshStandardMaterial({ color: '#5a6170', roughness: 0.6, metalness: 0.5 });
+    const n = 2 + Math.floor(this.rnd() * 3);
+    for (let i = 0; i < n; i++) {
+      const z = z0 + this.rnd() * Math.max(1, z1 - z0);
+      const xx = x - this.rnd() * 6;
+      const r = this.rnd();
+      if (r < 0.35) this.batch('roof-tank', tank, grey, xx, h + 1.7, z);
+      else if (r < 0.75) this.batch('roof-ac', box, grey, xx, h + 1.4, z, this.rnd() * 3);
+      else {
+        this.batch('roof-mast', mast, dark, xx, h + 2.5, z, 0, 1, false);
+        this.batch('roof-dish', dish, grey, xx + 0.6, h + 1.2, z, this.rnd() * 6);
+      }
+    }
   }
 
   // ---------- helpers ----------
@@ -263,6 +331,7 @@ export class CityBuilder {
   /** Streamline-moderne hotel: stacked volume, colored bands, rounded corner tower, neon. */
   decoBuilding(x0: number, z0: number, x1: number, z1: number, h: number, color: string, trim: string, name: string, neonColor: string): void {
     this.building(x0, z0, x1, z1, h, 'deco', color, 1 + Math.floor(this.rnd() * 3));
+    this.facadeDetail(x1 + 0.6, z0, z1, h);
     // horizontal eyebrow bands on the facade
     for (let y = 3.4; y < h - 1; y += 3.6) this.band(x1, z0 + 0.5, x1 + 0.6, z1 - 0.5, y, 0.25, '#ffffff');
     this.band(x0 - 0.3, z0 - 0.3, x1 + 0.3, z1 + 0.3, h, 0.9, trim);

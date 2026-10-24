@@ -68,6 +68,22 @@ export interface ScriptHost {
   setHour(hour: number): void;
   setWeather(kind: WeatherKind): void;
   playSfx(name: string): void;
+  // ---- combat / police / crime (Season 3) ----
+  giveWeapon(weapon: string, ammo: number): void;
+  spawnEnemy(type: string, x: number, z: number, heading: number): number;
+  spawnEnemyGroup(type: string, place: string, count: number): number;
+  waitEnemiesCleared(group: number): MaybePromise<void>;
+  /** Enemy or group handle. */
+  setEnemyTarget(handle: number): void;
+  isEnemyDead(handle: number): boolean;
+  setWanted(level: number): void;
+  clearWanted(): void;
+  waitWantedCleared(): MaybePromise<void>;
+  spawnPickup(item: string, x: number, z: number): void;
+  arrestTarget(handle: number): MaybePromise<boolean>;
+  startRobbery(store: string): MaybePromise<boolean>;
+  waitVehicleDisabled(vehicle: number, timeLimit: number): MaybePromise<boolean>;
+  negotiate(scene: string): MaybePromise<boolean>;
 }
 
 export interface MockOptions {
@@ -79,6 +95,12 @@ export interface MockOptions {
   travelPolls?: number;
   /** IS_PLAYER_IN_ANY_VEHICLE turns true after this many polls. */
   vehiclePolls?: number;
+  arrestResults?: boolean[];
+  robberyResults?: boolean[];
+  disabledResults?: boolean[];
+  negotiateResults?: boolean[];
+  /** IS_ENEMY_DEAD turns true after this many polls of the same handle. */
+  enemyPolls?: number;
   /** When set, async story calls stay pending until resolved manually via `resolveNext`. */
   manualAsync?: boolean;
 }
@@ -214,4 +236,56 @@ export class MockHost implements ScriptHost {
   setHour(hour: number): void { this.rec(`SET_HOUR ${hour}`); }
   setWeather(kind: WeatherKind): void { this.weather = kind; this.rec(`SET_WEATHER ${kind}`); }
   playSfx(name: string): void { this.rec(`PLAY_SFX ${name}`); }
+  // ---- combat / police / crime ----
+  wanted = 0;
+  weapons: string[] = [];
+  private enemyPollCount = new Map<number, number>();
+  private take(q: boolean[] | undefined): boolean { return q && q.length ? q.shift()! : true; }
+  giveWeapon(weapon: string, ammo: number): void { this.weapons.push(weapon); this.rec(`GIVE_WEAPON ${weapon} ${ammo}`); }
+  spawnEnemy(type: string, x: number, z: number, heading: number): number {
+    const h = this.nextHandle++;
+    this.entities.set(h, { kind: 'enemy', model: type, x, z });
+    this.rec(`SPAWN_ENEMY ${type} ${x} ${z} ${heading} -> ${h}`);
+    return h;
+  }
+  spawnEnemyGroup(type: string, place: string, count: number): number {
+    const h = this.nextHandle++;
+    this.entities.set(h, { kind: 'group', model: type, x: this.x, z: this.z });
+    this.rec(`SPAWN_ENEMY_GROUP ${type} ${place} ${count} -> ${h}`);
+    return h;
+  }
+  waitEnemiesCleared(group: number): MaybePromise<void> { this.handle(group); this.rec(`WAIT_ENEMIES_CLEARED ${group}`); return this.later('enemies', undefined); }
+  setEnemyTarget(handle: number): void { this.handle(handle); this.rec(`SET_ENEMY_TARGET ${handle}`); }
+  isEnemyDead(handle: number): boolean {
+    this.handle(handle);
+    const n = (this.enemyPollCount.get(handle) ?? 0) + 1;
+    this.enemyPollCount.set(handle, n);
+    return n > (this.opts.enemyPolls ?? 2);
+  }
+  setWanted(level: number): void { this.wanted = level; this.rec(`SET_WANTED ${level}`); }
+  clearWanted(): void { this.wanted = 0; this.rec('CLEAR_WANTED'); }
+  waitWantedCleared(): MaybePromise<void> { this.rec('WAIT_WANTED_CLEARED'); this.wanted = 0; return this.later('wanted', undefined); }
+  spawnPickup(item: string, x: number, z: number): void { this.rec(`SPAWN_PICKUP ${item} ${x} ${z}`); }
+  arrestTarget(handle: number): MaybePromise<boolean> {
+    this.handle(handle);
+    const r = this.take(this.opts.arrestResults);
+    this.rec(`ARREST_TARGET ${handle} -> ${r ? 'ARRESTED' : 'ESCAPED'}`);
+    return this.later('arrest', r);
+  }
+  startRobbery(store: string): MaybePromise<boolean> {
+    const r = this.take(this.opts.robberyResults);
+    this.rec(`START_ROBBERY ${store} -> ${r ? 'DONE' : 'FAILED'}`);
+    return this.later('robbery', r);
+  }
+  waitVehicleDisabled(vehicle: number, timeLimit: number): MaybePromise<boolean> {
+    this.handle(vehicle);
+    const r = this.take(this.opts.disabledResults);
+    this.rec(`WAIT_VEHICLE_DISABLED ${vehicle} ${timeLimit} -> ${r ? 'STOPPED' : 'ESCAPED'}`);
+    return this.later('disabled', r);
+  }
+  negotiate(scene: string): MaybePromise<boolean> {
+    const r = this.take(this.opts.negotiateResults);
+    this.rec(`NEGOTIATE ${scene} -> ${r ? 'SURRENDER' : 'FIGHT'}`);
+    return this.later('negotiate', r);
+  }
 }

@@ -167,3 +167,44 @@ for example `m10.scm:14 [thread 1]: unknown music mood "jazz" (use calm, tension
 Host methods (`ScriptHost`): `cinematicStart()`, `cinematicEnd()`, `cameraShot(preset, target, ms)`,
 `cameraFollow(vehicle, ms)`, `showTitle(title, subtitle, ms)`, `musicCue(mood)`, `slowMotion(factor, ms)`,
 `screenShake(strength)`, `setHour(hour)`, `setWeather(kind)`, `playSfx(name)`.
+
+
+## Combat, police and crime (0x06xx, Season 3)
+
+| Opcode | Command | Args | Returns | Async | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 0x0600 | `GIVE_WEAPON` | weapon `str`, ammo `int` | — | | `fists`, `bat`, `knife`, `taser`, `pistol`, `smg`, `shotgun`, `rifle`, `sniper`, or `"armor"` (full vest). |
+| 0x0601 | `SPAWN_ENEMY` | type `str`, x, z, heading `float` | handle | | Types: `lotus`, `lotus_heavy`, `lotus_sniper`, `gang`, `thug`, `courier`, `intruder` (runs), `guard`, `hostage_taker` (holds position until provoked). Water positions are clamped to the shore. |
+| 0x0602 | `SPAWN_ENEMY_GROUP` | type `str`, place `str`, count `int` | group handle | | 1..12 enemies in a ring 5–12 m around a named place. |
+| 0x0603 | `WAIT_ENEMIES_CLEARED` | enemy or group handle | — | yes | Resolves when every member is dead, knocked out, zip-tied, surrendered, despawned or has fled > 90 m. |
+| 0x0604 | `SET_ENEMY_TARGET` | enemy or group handle | — | | Make them hunt the player right away. |
+| 0x0605 | `IS_ENEMY_DEAD` | enemy or group handle | bool | | Out of the fight (same rule as above). |
+| 0x0606 | `SET_WANTED` | level `int` | — | | 0..5 stars (police system). |
+| 0x0607 | `CLEAR_WANTED` | — | — | | Calls off every unit. |
+| 0x0608 | `WAIT_WANTED_CLEARED` | — | — | yes | Resolves when the player has 0 stars (immediately if already 0). |
+| 0x0609 | `SPAWN_PICKUP` | item `str`, x, z `float` | — | | Weapon id, `ammo`, `armor`, `health`, `cash`. Mission pickups persist until the mission ends. |
+| 0x060a | `ARREST_TARGET` | enemy handle | bool | yes | TRUE when knocked out, tased, zip-tied or surrendered; FALSE when killed, escaped (> 160 m) or after 180 s. |
+| 0x060b | `START_ROBBERY` | store `str` | bool | yes | `beach`, `oldtown`, `harbor`. TRUE when the cash bag is grabbed, FALSE when the robbery falls apart. |
+| 0x060c | `WAIT_VEHICLE_DISABLED` | vehicle handle, time limit `int` (s) | bool | yes | TRUE once two tires are shot out (or the engine) and it stops; FALSE if it escapes (> 260 m) or time runs out. Shows the countdown. |
+| 0x060d | `NEGOTIATE` | scene `str` | bool | yes | Hostage negotiation (`bank`). TRUE: mission enemies surrender. FALSE: they open fire. |
+
+Host methods (`ScriptHost`): `giveWeapon`, `spawnEnemy`, `spawnEnemyGroup`, `waitEnemiesCleared`, `setEnemyTarget`,
+`isEnemyDead`, `setWanted`, `clearWanted`, `waitWantedCleared`, `spawnPickup`, `arrestTarget`, `startRobbery`,
+`waitVehicleDisabled`, `negotiate`. Enemy handles also work with `ADD_BLIP_FOR_HANDLE`, `GET_DISTANCE_TO`,
+`IS_PLAYER_NEAR_HANDLE` and `DOES_ENTITY_EXIST`.
+
+The `MissionDirector` implements them through `DirectorCallbacks.combat` (optional) and otherwise through
+`COMBAT_HOOKS` (`src/scripting/combatHooks.ts`), which the combat, police and crime systems register at init.
+Without those systems the natives degrade gracefully (spawns return inert handles, waits resolve at once).
+`MockHost` records every call; `MockOptions` adds `arrestResults`, `robberyResults`, `disabledResults`,
+`negotiateResults` and `enemyPolls` (IS_ENEMY_DEAD turns true after N polls).
+
+Example (from `missions/s3-01.scm`):
+
+```
+GIVE_WEAPON "taser" 8
+SPAWN_ENEMY "intruder" 62.0 -92.0 1.57 -> runner
+ADD_BLIP_FOR_HANDLE runner "red" -> blip
+SET_ENEMY_TARGET runner
+ARREST_TARGET runner -> caught
+```

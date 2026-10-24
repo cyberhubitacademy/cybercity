@@ -1,6 +1,7 @@
 import { NativeRegistry, ScriptVM, bindGameNatives, ScriptHandleError } from '../scripting';
 import type { ScriptHost, ScriptInstance, CameraPreset, MusicMood, WeatherKind } from '../scripting';
 import { NPC_PRESETS } from '../scripting/cinematic';
+import { COMBAT_HOOKS, DIRECTOR_LINK, type CombatHooks } from '../scripting/combatHooks';
 import type { ShotTarget } from './Cinematics';
 import { missionProgram, MISSION_IDS } from '../scripting/missionSources';
 import type { MissionDef, ObjectiveDef, DialogueLine } from '../missions/types';
@@ -37,6 +38,12 @@ export interface DirectorCallbacks {
   setHour?(hour: number): void;
   setWeather?(kind: WeatherKind): void;
   playSfx?(name: string): void;
+  // ---- combat / police / crime (Season 3, optional) ----
+  /**
+   * Gameplay hooks for the Season 3 natives. When omitted the director uses
+   * COMBAT_HOOKS, which the combat/police/crime systems register themselves.
+   */
+  combat?: CombatHooks;
 }
 
 const COLORS: Record<string, string> = { pink: '#ff2fa0', cyan: '#19e6ff', yellow: '#ffd23f', red: '#ff4d6d', purple: '#b14dff' };
@@ -68,10 +75,20 @@ export class MissionDirector implements ScriptHost {
   /** True between CINEMATIC_START and CINEMATIC_END. */
   inCinematic = false;
   private moodSet = false;
+  /** Script handles for enemies / enemy groups -> combat-system ids. */
+  private enemies = new Map<number, { id: number; group: boolean }>();
 
   constructor(private world: WorldSim, private cb: DirectorCallbacks) {
     this.vm = new ScriptVM(bindGameNatives(new NativeRegistry(), this));
     this.vm.onError = (_t, msg) => console.warn('[SCM]', msg);
+    // lend slow motion and camera shake to the gameplay systems (Focus mode, kill cam, weapon wheel)
+    DIRECTOR_LINK.slowMotion = (f, ms) => this.cb.slowMotion?.(f, ms);
+    DIRECTOR_LINK.shake = (s) => this.cb.shake?.(s);
+  }
+
+  /** Combat hook: the Game's callback if wired, else the one the system registered. */
+  private hook<K extends keyof CombatHooks>(k: K): CombatHooks[K] {
+    return this.cb.combat?.[k] ?? COMBAT_HOOKS[k];
   }
 
   has(id: string): boolean {
@@ -138,6 +155,10 @@ export class MissionDirector implements ScriptHost {
     this.collect = null;
     for (const v of this.entities.values()) this.world.removeVehicle(v);
     this.entities.clear();
+    if (this.enemies.size) {
+      this.enemies.clear();
+      try { this.hook('clearMission')?.(); } catch (err) { console.warn('[SCM] clearMission', err); }
+    }
     this.cb.onObjective();
   }
 
@@ -244,6 +265,10 @@ export class MissionDirector implements ScriptHost {
       if (b.handle !== undefined) {
         const v = this.entities.get(b.handle);
         if (v) out.push({ x: v.position.x, z: v.position.z, color: b.color, handle: b.handle });
+        else {
+          const p = this.enemyPos(b.handle);
+          if (p) out.push({ x: p.x, z: p.z, color: b.color, handle: b.handle });
+        }
       } else out.push(b);
     }
     return out;
@@ -307,7 +332,7 @@ export class MissionDirector implements ScriptHost {
     return id;
   }
   addBlipForHandle(handle: number, color: string): number {
-    if (!this.entities.has(handle)) throw new ScriptHandleError(handle);
+    if (!this.entities.has(handle) && !this.enemies.has(handle)) throw new ScriptHandleError(handle);
     const id = this.nextId++;
     this.blips.set(id, { x: 0, z: 0, color: COLORS[color] ?? '#ff4d6d', handle });
     return id;
@@ -351,7 +376,7 @@ export class MissionDirector implements ScriptHost {
     this.entities.delete(handle);
     setTimeout(() => this.world.removeVehicle(v), 2500);
   }
-  doesEntityExist(handle: number): boolean { return this.entities.has(handle); }
+  doesEntityExist(handle: number): boolean { return this.entities.has(handle) || this.enemies.has(handle); }
   setVehicleRoute(vehicle: number, route: string): void {
     const v = this.entities.get(vehicle);
     if (!v) throw new ScriptHandleError(vehicle);
@@ -367,8 +392,10 @@ export class MissionDirector implements ScriptHost {
   }
   distanceTo(handle: number): number {
     const v = this.entities.get(handle);
-    if (!v) throw new ScriptHandleError(handle);
-    return v.position.distanceTo(this.world.focus);
+    if (v) return v.position.distanceTo(this.world.focus);
+    if (!this.enemies.has(handle)) throw new ScriptHandleError(handle);
+    const p = this.enemyPos(handle);
+    return p ? Math.hypot(p.x - this.world.focus.x, p.z - this.world.focus.z) : 9999;
   }
   showDialogue(id: string): Promise<void> {
     const lines = this.linesFor(id);
@@ -459,4 +486,73 @@ export class MissionDirector implements ScriptHost {
   }
   setWeather(kind: WeatherKind): void { this.cb.setWeather?.(kind); }
   playSfx(name: string): void { this.cb.playSfx?.(name); }
+
+  // ---- combat / police / crime (Season 3) ----
+
+  private enemyPos(handle: number): { x: number; z: number } | null {
+    const e = this.enemies.get(handle);
+    if (!e || e.group) return null;
+    return this.hook('enemyPosition')?.(e.id) ?? null;
+  }
+  private enemy(handle: number): { id: number; group: boolean } {
+    const e = this.enemies.get(handle);
+    if (!e) throw new ScriptHandleError(handle, 'enemy');
+    return e;
+  }
+  giveWeapon(weapon: string, ammo: number): void { this.hook('giveWeapon')?.(weapon, ammo); }
+  spawnEnemy(type: string, x: number, z: number, heading: number): number {
+    // enemies relative to the player can land past the shoreline: keep them on land
+    if (isWater(x, z)) { x = Math.min(x, 234); z = Math.min(z, 208); }
+    const id = this.hook('spawnEnemy')?.(type, x, z, heading) ?? -1;
+    const h = this.nextId++;
+    this.enemies.set(h, { id, group: false });
+    return h;
+  }
+  spawnEnemyGroup(type: string, place: string, count: number): number {
+    if (!PLACES[place]) throw new Error(`unknown place "${place}"`);
+    const id = this.hook('spawnEnemyGroup')?.(type, place, count) ?? -1;
+    const h = this.nextId++;
+    this.enemies.set(h, { id, group: true });
+    return h;
+  }
+  waitEnemiesCleared(group: number): Promise<void> {
+    const e = this.enemy(group);
+    const f = this.hook('enemiesCleared');
+    if (!f || e.id < 0) return Promise.resolve();
+    if (!e.group) {
+      // a single enemy handle: wait until it is out of the fight
+      return new Promise((resolve) => {
+        const t = setInterval(() => { if (!this.enemies.has(group) || this.isEnemyDead(group)) { clearInterval(t); resolve(); } }, 300);
+      });
+    }
+    return f(e.id);
+  }
+  setEnemyTarget(handle: number): void {
+    const e = this.enemy(handle);
+    if (e.id >= 0) this.hook('setEnemyTarget')?.(e.id, e.group);
+  }
+  isEnemyDead(handle: number): boolean {
+    const e = this.enemy(handle);
+    const f = this.hook('isEnemyDead');
+    return !f || e.id < 0 ? true : f(e.id, e.group);
+  }
+  setWanted(level: number): void { this.hook('setWanted')?.(level); }
+  clearWanted(): void { this.hook('clearWanted')?.(); }
+  waitWantedCleared(): Promise<void> { return this.hook('wantedCleared')?.() ?? Promise.resolve(); }
+  spawnPickup(item: string, x: number, z: number): void { this.hook('spawnPickup')?.(item, x, z); }
+  arrestTarget(handle: number): Promise<boolean> {
+    const e = this.enemy(handle);
+    const f = this.hook('arrestTarget');
+    return !f || e.id < 0 ? Promise.resolve(true) : f(e.id);
+  }
+  startRobbery(store: string): Promise<boolean> { return this.hook('startRobbery')?.(store) ?? Promise.resolve(true); }
+  waitVehicleDisabled(vehicle: number, timeLimit: number): Promise<boolean> {
+    const v = this.entities.get(vehicle);
+    if (!v) return Promise.reject(new ScriptHandleError(vehicle));
+    const f = this.hook('vehicleDisabled');
+    if (!f) return Promise.resolve(true);
+    this.timer = timeLimit > 0 ? timeLimit : this.timer;
+    return f(v, timeLimit).then((ok) => { this.timer = null; return ok; });
+  }
+  negotiate(scene: string): Promise<boolean> { return this.hook('negotiate')?.(scene) ?? Promise.resolve(true); }
 }

@@ -1,2 +1,6 @@
 3D models in this folder are CC0 1.0 (public domain) by Quaternius (https://quaternius.com),
 downloaded from Poly Pizza (https://poly.pizza). No attribution required; credited with thanks.
+movement/dolphin.glb, manta.glb, fish.glb, fish2.glb, fish3.glb: CC0 1.0 by Quaternius via Poly Pizza
+  (https://poly.pizza/m/3LzFgI3GLO, yzD8b7ZHZm, BEcU9rjiAq, XWl86YFtpF, Ymu8ftrmuT).
+life/dog.glb  — "Shiba Inu" by Quaternius, CC0 1.0, https://poly.pizza/m/y4wdQpg767
+life/cat.glb  — "Cat" by Quaternius, CC0 1.0, https://poly.pizza/m/qKICY6xla2

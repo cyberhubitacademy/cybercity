@@ -22,6 +22,12 @@ import s2_07 from '../../missions/s2-07.scm?raw';
 import s2_08 from '../../missions/s2-08.scm?raw';
 import s2_side_1 from '../../missions/s2-side-1.scm?raw';
 import s2_side_2 from '../../missions/s2-side-2.scm?raw';
+import s3_01 from '../../missions/s3-01.scm?raw';
+import s3_02 from '../../missions/s3-02.scm?raw';
+import s3_03 from '../../missions/s3-03.scm?raw';
+import s3_04 from '../../missions/s3-04.scm?raw';
+import s3_05 from '../../missions/s3-05.scm?raw';
+import s3_06 from '../../missions/s3-06.scm?raw';
 
 // Mission sources bundled into the build (Vite `?raw`), compiled on first use.
 // Compiling at load time keeps the .scm files the single source of truth;
@@ -50,6 +56,12 @@ export const MISSION_SOURCES: Record<string, string> = {
   's2-08': s2_08,
   's2-side-1': s2_side_1,
   's2-side-2': s2_side_2,
+  's3-01': s3_01,
+  's3-02': s3_02,
+  's3-03': s3_03,
+  's3-04': s3_04,
+  's3-05': s3_05,
+  's3-06': s3_06,
 };
 
 const cache = new Map<string, { bytes: Uint8Array; program: Program }>();

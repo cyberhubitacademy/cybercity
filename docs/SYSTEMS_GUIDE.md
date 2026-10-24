@@ -65,7 +65,7 @@ Types: `npx tsc --noEmit` (must stay clean for YOUR files; ignore others' in-pro
 | C crouch-sneak toggle; Space = climb/vault near ledge, swim up; C = swim down; Space while falling = parachute | movement |
 | P phone | life |
 | N nitro, L headlights, K vehicle menu (doors/trunk/hood) | vehicles |
-| Right mouse aim, Left mouse shoot/punch, Q (hold) weapon wheel, 1–5 weapon slots, X holster, Z Focus (slow-mo aim), V shoulder swap | combat |
+| Right mouse aim (block with melee), Left mouse shoot/punch, Q tap = take/leave cover, Q hold = weapon wheel, 1–5 weapon slots, X holster, Z Focus (slow-mo aim), B shoulder swap; E context: takedown / disarm / human shield / zip-tie / search body | combat |
 
 ## Quality bar
 - GTA V/VI feel: responsive controls, smooth blends, camera feel, satisfying feedback (sounds, shakes, UI pops).

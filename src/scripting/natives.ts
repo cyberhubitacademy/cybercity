@@ -159,5 +159,20 @@ export function bindGameNatives(reg: NativeRegistry, host: ScriptHost): NativeRe
     host.setWeather(kind);
   });
   b('PLAY_SFX', (_c, a) => host.playSfx(S(a, 0)));
+  // combat / police / crime (Season 3)
+  b('GIVE_WEAPON', (_c, a) => host.giveWeapon(S(a, 0), Math.max(0, N(a, 1))));
+  b('SPAWN_ENEMY', (_c, a) => sInt(host.spawnEnemy(S(a, 0), N(a, 1), N(a, 2), N(a, 3))));
+  b('SPAWN_ENEMY_GROUP', (_c, a) => sInt(host.spawnEnemyGroup(S(a, 0), S(a, 1), Math.max(1, Math.min(12, N(a, 2))))));
+  b('WAIT_ENEMIES_CLEARED', (_c, a) => toPending(host.waitEnemiesCleared(N(a, 0)), () => undefined));
+  b('SET_ENEMY_TARGET', (_c, a) => host.setEnemyTarget(N(a, 0)));
+  b('IS_ENEMY_DEAD', (_c, a) => sBool(host.isEnemyDead(N(a, 0))));
+  b('SET_WANTED', (_c, a) => host.setWanted(Math.max(0, Math.min(5, N(a, 0)))));
+  b('CLEAR_WANTED', () => host.clearWanted());
+  b('WAIT_WANTED_CLEARED', () => toPending(host.waitWantedCleared(), () => undefined));
+  b('SPAWN_PICKUP', (_c, a) => host.spawnPickup(S(a, 0), N(a, 1), N(a, 2)));
+  b('ARREST_TARGET', (_c, a) => toPending(host.arrestTarget(N(a, 0)), (v) => sBool(!!v)));
+  b('START_ROBBERY', (_c, a) => toPending(host.startRobbery(S(a, 0)), (v) => sBool(!!v)));
+  b('WAIT_VEHICLE_DISABLED', (_c, a) => toPending(host.waitVehicleDisabled(N(a, 0), Math.max(0, N(a, 1))), (v) => sBool(!!v)));
+  b('NEGOTIATE', (_c, a) => toPending(host.negotiate(S(a, 0)), (v) => sBool(!!v)));
   return reg;
 }

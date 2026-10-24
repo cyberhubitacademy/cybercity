@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { hawaiianShirt } from '../world/textures';
+import type { PoseName } from '../systems/movement/poses';
+import { PoseLayer, type PoseBindings, type RigPoseOptions } from '../systems/movement/rigPose';
 
 // Procedural stylized human: capsule limbs with hips/knees/shoulders/elbows,
 // so walk, run, idle, jump and sit poses can be animated by rotating pivots.
@@ -64,6 +66,8 @@ export class Humanoid {
   private elbowR = new THREE.Group();
   private phase = Math.random() * 10;
   private shirtMesh: THREE.Mesh[] = [];
+  private pose = new PoseLayer();
+  private poseBones: PoseBindings;
 
   constructor(public outfit: Outfit) {
     const o = outfit;
@@ -185,6 +189,24 @@ export class Humanoid {
         c.receiveShadow = false;
       }
     });
+
+    const down = new THREE.Vector3(0, -1, 0), up = new THREE.Vector3(0, 1, 0);
+    this.poseBones = {
+      spine: { bone: this.chest, along: up }, neck: { bone: this.headPivot, along: up },
+      armUL: { bone: this.armL, along: down }, armLL: { bone: this.elbowL, along: down },
+      armUR: { bone: this.armR, along: down }, armLR: { bone: this.elbowR, along: down },
+      legUL: { bone: this.legL, along: down }, legLL: { bone: this.kneeL, along: down },
+      legUR: { bone: this.legR, along: down }, legLR: { bone: this.kneeR, along: down },
+    };
+  }
+
+  /** Layer a procedural pose over the walk cycle (see Rig.setPose). */
+  setPose(name: PoseName, weight = 1, opts?: RigPoseOptions): void {
+    this.pose.set(name, weight, opts);
+  }
+
+  poseWeight(name: PoseName): number {
+    return this.pose.weight(name);
   }
 
   private shirtMaterial(o: Outfit): THREE.MeshStandardMaterial {
@@ -205,6 +227,16 @@ export class Humanoid {
    * `seated` poses the character for driving.
    */
   animate(dt: number, speed: number, airborne = false, seated = false): void {
+    const posed = this.pose.active && !seated;
+    if (posed) {
+      // Poses rotate pivots on every axis; start each frame from neutral.
+      for (const b of Object.values(this.poseBones)) b?.bone.rotation.set(0, 0, 0);
+    }
+    this.baseAnimate(dt, speed, airborne, seated);
+    if (posed) this.pose.apply(dt, speed, this.root, this.body, this.poseBones);
+  }
+
+  private baseAnimate(dt: number, speed: number, airborne: boolean, seated: boolean): void {
     const s = Math.min(speed, 8);
     const cadence = s < 0.1 ? 0 : 2.2 + s * 0.95;
     this.phase += dt * cadence;
