@@ -16,7 +16,7 @@ import { HintBox, ensureCss, h, key, money, runMenu, statBar, splash, type MenuR
 import { Culler, facadeNear, findClear, iconSprite, neonSign } from './world';
 import * as P from './props';
 import { RigPoser } from './rigtools';
-import { applyPose, buildStation, EXERCISE_NAMES, exerciseDesc, runWorkout, type Exercise, type PoseState, type Station } from './gym';
+import { applyPose, buildStation, EXERCISE_NAMES, exerciseDesc, registerStation, runWorkout, type Exercise, type PoseState, type Station } from './gym';
 import { emitEvent } from './bus';
 
 export type { LifeState } from './stats';
@@ -399,6 +399,7 @@ export class LifeSystem implements GameSystem {
       this.culler.add(grp, st.x, st.z, 160);
     }
     this.stations.push(st);
+    registerStation(st);
     const fp: Record<Exercise, [number, number]> = { bench: [0.6, 1.6], squat: [2.0, 1.2], deadlift: [2.0, 1.2], pulldown: [0.6, 1.4], bag: [0.5, 0.5], treadmill: [0.9, 1.9] };
     const [fw, fd] = fp[st.exercise];
     const solid = st.exercise !== 'squat' && st.exercise !== 'deadlift';

@@ -299,7 +299,8 @@ export class CombatSystem implements GameSystem {
     const input = ctx.input;
 
     // hospital respawn (Game resets health after "wasted")
-    if (this.wasDead && p.health > 1) this.onRespawn();
+    // (death usually lands mid-update and the hospital screen opens before the next one, so check `dying` too)
+    if ((this.wasDead || this.dying) && p.health > 1) this.onRespawn();
     this.wasDead = p.health <= 0;
     if (this.dying && p.health <= 0 && now - this.dieAt > 7000) {
       // the hospital flow never ran (another screen was open): patch the player up ourselves
@@ -337,7 +338,9 @@ export class CombatSystem implements GameSystem {
     // camera-forward aim ray
     ctx.camera.getWorldDirection(_fwd);
     this.aimDir.copy(_fwd);
-    this.aimOrigin.copy(ctx.camera.position);
+    // shots leave from the camera the player actually sees: the rig rebuilt it this frame
+    // without the over-the-shoulder shift, so re-apply last frame's shift (else bullets miss the crosshair)
+    this.aimOrigin.copy(ctx.camera.position).add(this.camOffset);
 
     if (onFoot) this.updateOnFoot(dt, fire, firePressed);
     else if (w.vehicle && (this.aiming || this.firing) && fire) this.tryShoot(firePressed, true);

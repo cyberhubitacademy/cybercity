@@ -221,7 +221,7 @@ class Transit implements GameSystem {
     const ctx = this.ctx;
     if (this.tram.docked && this.tram.at === i) { this.board(); return; }
     this.waitingAt = i;
-    ctx.notify(`The tram to [y]${TRAM_STOPS[this.tram.dir > 0 ? TRAM_STOPS.length - 1 : 0].name}[/y] arrives in about ${Math.ceil(this.tram.eta(i))}s. Wait at the stop.`, 'info');
+    ctx.notify(`The tram to [y]${TRAM_STOPS[this.tram.dir > 0 ? TRAM_STOPS.length - 1 : 0].name}[/y] arrives in about ${Math.ceil(this.tram.eta(i))}s. Wait at the stop, or hold ~Space~ to skip the wait.`, 'info');
   }
 
   private board(): void {
@@ -284,7 +284,11 @@ class Transit implements GameSystem {
   private updateTram(dt: number): void {
     const ctx = this.ctx;
     const fast = this.ride?.kind === 'tram' && ctx.input.isDown('Space') && !this.tram.docked;
-    const arrived = this.tram.step(dt * (fast ? 6 : 1));
+    // waiting at a stop: Space skips the wait too (no one likes a two-minute tram)
+    const wait = this.waitingAt !== null ? TRAM_STOPS[this.waitingAt] : null;
+    const me = ctx.world.player.position;
+    const fastWait = !!wait && !this.ride && !ctx.world.vehicle && ctx.input.isDown('Space') && Math.hypot(me.x - wait.x, me.z - wait.z) < 9;
+    const arrived = this.tram.step(dt * (fast ? 6 : fastWait ? 10 : 1));
     const p = pointAt(this.tram.s);
     // smooth heading around the corner: look a few meters ahead/behind
     const a = pointAt(this.tram.s - 4), b = pointAt(this.tram.s + 4);

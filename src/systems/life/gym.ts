@@ -240,11 +240,31 @@ export function resetPose(ctx: SystemContext, st: Station): void {
   }
 }
 
-/** Frame the camera on the workout. */
+/** Every station built, so the workout camera can avoid the neighbouring machines. */
+const knownStations: Station[] = [];
+export function registerStation(st: Station): void { knownStations.push(st); }
+
+/** Frame the camera on the workout from the angle with the clearest view (no machine in the way). */
 export function frameCamera(ctx: SystemContext, st: Station): void {
-  const side = st.yaw + Math.PI / 2 + 0.5;
   const d = st.exercise === 'treadmill' ? 4.2 : 3.8;
-  ctx.camera.position.set(st.x + Math.sin(side) * d, st.y + 1.9, st.z + Math.cos(side) * d);
+  let best = st.yaw + Math.PI / 2 + 0.5, bestClear = -1;
+  for (const off of [0.5, -0.5, 0.9, -0.9, 0, 1.4, -1.4, Math.PI - 0.6, Math.PI + 0.6, Math.PI]) {
+    const a = st.yaw + Math.PI / 2 + off;
+    const cx = st.x + Math.sin(a) * d, cz = st.z + Math.cos(a) * d;
+    // clearance: closest other machine to the camera -> station sight line
+    let clear = 99;
+    for (const o of knownStations) {
+      if (o === st || Math.abs(o.x - st.x) > 12 || Math.abs(o.z - st.z) > 12) continue;
+      const vx = st.x - cx, vz = st.z - cz, L2 = vx * vx + vz * vz;
+      const t = Math.max(0, Math.min(1, ((o.x - cx) * vx + (o.z - cz) * vz) / L2));
+      clear = Math.min(clear, Math.hypot(cx + vx * t - o.x, cz + vz * t - o.z));
+    }
+    // and no wall between the camera and the lifter (indoor gyms)
+    if (ctx.world.city.collision.raycast(st.x, st.y + 1.6, st.z, Math.sin(a), 0, Math.cos(a), d) < d - 0.3) clear = 0;
+    if (clear > bestClear + 0.3) { bestClear = clear; best = a; }
+    if (clear > 2.2) break; // good enough: keep the preferred angle order
+  }
+  ctx.camera.position.set(st.x + Math.sin(best) * d, st.y + 1.9, st.z + Math.cos(best) * d);
   ctx.camera.lookAt(st.x, st.y + (st.exercise === 'bench' ? 0.7 : 1.0), st.z);
 }
 
@@ -284,9 +304,21 @@ export async function runWorkout(ctx: SystemContext, life: LifeState, st: Statio
       quality = r ? r.quality : 0;
     }
   } finally {
+    // rest on the machine (not a frozen standing pose) while the result card is up
+    pose.phase = 0;
+    pose.effort = 0;
+    pose.punch = 0;
+    pose.run = 0;
+  }
+  try {
+    await finishWorkout(ctx, life, ex, quality, onDone);
+  } finally {
     setPose(null);
     resetPose(ctx, st);
   }
+}
+
+async function finishWorkout(ctx: SystemContext, life: LifeState, ex: Exercise, quality: number, onDone: () => void): Promise<void> {
   if (quality <= 0.01) { ctx.notify('Workout abandoned.', 'warn'); return; }
   const before = { ...life };
   const sessions = life.today.sessions[ex] ?? 0;

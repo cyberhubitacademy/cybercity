@@ -15,9 +15,9 @@ const CSS = `
 .cbt-weapon .reload { position:absolute; left:0; bottom:0; height:3px; background:#f0c850; width:0; }
 .cbt-weapon.low .ammo { color:#e0453a; }
 .cbt-cross { position:absolute; left:50%; top:50%; width:0; height:0; }
-.cbt-cross i { position:absolute; background:#fff; box-shadow:0 0 2px #000, 0 0 1px #000; }
-.cbt-cross i.h { width:9px; height:2px; top:-1px; } .cbt-cross i.v { width:2px; height:9px; left:-1px; }
-.cbt-cross .dot { position:absolute; width:4px; height:4px; left:-2px; top:-2px; border-radius:50%; background:#fff; box-shadow:0 0 2px #000; }
+.cbt-cross i { position:absolute; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.85), 0 0 3px rgba(0,0,0,.6); }
+.cbt-cross i.h { width:12px; height:3px; top:-1.5px; } .cbt-cross i.v { width:3px; height:12px; left:-1.5px; }
+.cbt-cross .dot { position:absolute; width:5px; height:5px; left:-2.5px; top:-2.5px; border-radius:50%; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.85); }
 .cbt-cross.hostile i, .cbt-cross.hostile .dot { background:#e0453a; }
 .cbt-cross.melee i { display:none; }
 .cbt-hit { position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; opacity:0; }
