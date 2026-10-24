@@ -3,6 +3,17 @@ import { CityBuilder } from '../world/City';
 import { Props } from '../world/Props';
 import { Environment, Quality } from '../world/Environment';
 import { Player } from '../actors/Player';
+import { createRig, type Rig } from '../actors/CharacterModel';
+
+/** Daylight-only clock: the day loops between these hours (no sunset or night). */
+export const DAY_START = 8;
+export const DAY_END = 16.5;
+
+/** Clamp any requested hour into bright daylight. */
+export function daylight(h: number): number {
+  const x = ((h % 24) + 24) % 24;
+  return x >= DAY_START && x <= DAY_END ? x : x > DAY_END && x < 20 ? DAY_END - 0.5 : 11;
+}
 import { Pedestrians } from '../actors/Pedestrians';
 import { Vehicle, VEHICLE_DEFS, VehicleKind, headMat, tailMat } from '../vehicles/Vehicle';
 import { Traffic, separateVehicles } from '../vehicles/Traffic';
@@ -21,6 +32,7 @@ export interface WorldEvents {
   onCrash?: (strength: number) => void;
   onPlayerHit?: (damage: number) => void;
   onDistrict?: (id: DistrictId) => void;
+  onHijack?: (v: Vehicle) => void;
 }
 
 export class WorldSim {
@@ -88,6 +100,69 @@ export class WorldSim {
     return best;
   }
 
+  /** Closest AI traffic car the player can hijack (moving or not). */
+  nearestTraffic(range = 4.5): Vehicle | null {
+    let best: Vehicle | null = null, bd = range;
+    for (const v of this.traffic.cars) {
+      if (!this.traffic.isAi(v) || v.def.kind === 'boat') continue;
+      const d = v.position.distanceTo(this.player.position) - v.def.width * 0.3;
+      if (d < bd) { bd = d; best = v; }
+    }
+    return best;
+  }
+
+  private ejected: { rig: Rig; vel: THREE.Vector3; t: number; tumble: number }[] = [];
+
+  /**
+   * GTA-style carjack: the car stops dead, the driver is pulled out and thrown
+   * onto the road (tumbles, then runs away), and the player takes the wheel.
+   */
+  hijack(v: Vehicle): void {
+    this.traffic.release(v);
+    v.velocity.multiplyScalar(0.15);
+    v.speed *= 0.15;
+    if (!this.vehicles.includes(v)) this.vehicles.push(v);
+    v.onImpact = (s) => { if (this.vehicle === v) this.events.onCrash?.(s); };
+    const side = new THREE.Vector3(Math.cos(v.yaw), 0, -Math.sin(v.yaw));
+    const at = v.position.clone().addScaledVector(side, v.def.width / 2 + 0.8);
+    const rig = createRig({ shirt: '#e8e8f0', pants: '#2b3a55', skin: '#d9a27a', hair: '#2b2b2b' }, { female: Math.random() < 0.4 });
+    rig.root.position.copy(at);
+    rig.body.rotation.y = v.yaw + Math.PI / 2;
+    this.scene.add(rig.root);
+    this.ejected.push({ rig, vel: side.clone().multiplyScalar(5).setY(3), t: 0, tumble: 0.9 });
+    this.enterVehicle(v);
+    this.events.onHijack?.(v);
+  }
+
+  private updateEjected(dt: number): void {
+    for (let i = this.ejected.length - 1; i >= 0; i--) {
+      const e = this.ejected[i];
+      e.t += dt;
+      const p = e.rig.root.position;
+      if (e.tumble > 0) {
+        // thrown out: fly a little, hit the asphalt, roll
+        e.tumble -= dt;
+        e.vel.y -= 18 * dt;
+        p.addScaledVector(e.vel, dt);
+        if (p.y < 0) { p.y = 0; e.vel.y = 0; e.vel.multiplyScalar(0.6); }
+        e.rig.body.rotation.x = Math.min(1.4, e.t * 4);
+        e.rig.animate(dt, 0, true);
+      } else {
+        // get up and run away from the player
+        e.rig.body.rotation.x *= 0.85;
+        const away = p.clone().sub(this.player.position).setY(0).normalize();
+        p.addScaledVector(away, 5.5 * dt);
+        e.rig.body.rotation.y = Math.atan2(away.x, away.z);
+        e.rig.animate(dt, 5.5);
+      }
+      this.city.collision.resolveCircle(p, 0.35, p.y, 1.7);
+      if (e.t > 9) {
+        this.scene.remove(e.rig.root);
+        this.ejected.splice(i, 1);
+      }
+    }
+  }
+
   enterVehicle(v: Vehicle): void {
     this.vehicle = v;
     v.driver = 'player';
@@ -121,7 +196,8 @@ export class WorldSim {
   /** Advance the world one frame. `controlsEnabled` false while UI screens are open. */
   update(dt: number, input: Input, controlsEnabled: boolean): void {
     this.time += dt;
-    this.hour = (this.hour + (dt * this.timeScale) / 60) % 24;
+    this.hour += (dt * this.timeScale) / 60;
+    if (this.hour > DAY_END || this.hour < DAY_START) this.hour = DAY_START;
 
     const v = this.vehicle;
     if (v) {
@@ -167,6 +243,7 @@ export class WorldSim {
       }
     }
 
+    this.updateEjected(dt);
     const threats = all.map((c) => ({ pos: c.position, vel: c.velocity }));
     this.peds.update(dt, focus, threats);
 

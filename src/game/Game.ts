@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Renderer } from './Renderer';
-import { WorldSim } from './WorldSim';
+import { WorldSim, daylight } from './WorldSim';
 import { Input } from './Input';
 import { WorldMarkers } from './WorldMarkers';
 import { Interactions } from './Interactions';
@@ -153,7 +153,7 @@ export class Game {
       musicCue: (mood) => this.audio.setScore(mood),
       slowMotion: (factor, ms) => { this.timeScale = factor; this.slowUntil = performance.now() + ms; },
       shake: (strength) => { this.world.rig.addShake(strength); this.cinematic.shake(strength); },
-      setHour: (h) => { this.world.hour = h; },
+      setHour: (h) => { this.world.hour = daylight(h); }, // daylight only
       setWeather: (k) => this.weather.set(k),
       playSfx: (name) => {
         const ok: SfxId[] = ['click', 'good', 'bad', 'type', 'alert', 'open', 'pickup', 'levelup', 'passed', 'failed', 'crash', 'horn', 'door', 'whoosh', 'beep', 'cash'];
@@ -228,7 +228,7 @@ export class Game {
     this.mode = 'menu';
     this.ui.setHudVisible(false);
     this.audio.setMusicMode('menu');
-    this.world.hour = 18.4;
+    this.world.hour = 15.5;
     this.ui.mainMenu({
       hasSave: this.saves.hasSave(),
       onNew: () => void this.newGame(),
@@ -338,7 +338,7 @@ export class Game {
     if (this.world.vehicle) this.world.exitVehicle();
     this.world.player.place(p.position.x, p.position.z, p.position.yaw);
     this.world.rig.snapTo(this.world.player.position, p.position.yaw + Math.PI);
-    this.world.hour = p.hour;
+    this.world.hour = daylight(p.hour);
     this.applyProfileEffects();
     this.systems.init(this.sysCtx);
     this.mode = 'playing';
@@ -917,6 +917,11 @@ export class Game {
     }
     if (i.wasPressed('KeyE') || i.wasPressed('KeyF')) {
       const best = this.interactions.best(w.player.position.x, w.player.position.z);
+      const jack = w.nearestTraffic();
+      if (jack && (i.wasPressed('KeyF') || !best || best.id === 'ped')) {
+        w.hijack(jack);
+        return;
+      }
       if (best) best.action();
     }
   }
